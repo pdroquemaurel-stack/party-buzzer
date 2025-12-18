@@ -1,3 +1,24 @@
+:root { color-scheme: light dark; }
+
+{ box-sizing: border-box; } body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; line-height: 1.5; } .container { max-width: 900px; margin: 0 auto; padding: 2rem; } h1 { margin-top: 0; } nav.links { display: flex; gap: 1rem; margin: 1rem 0; flex-wrap: wrap; } a { color: #0b5fff; text-decoration: none; border: 1px solid #0b5fff55; padding: .6rem 1rem; border-radius: .5rem; } a:hover { background: #0b5fff12; } .card { border: 1px solid #e0e0e0; border-radius: .6rem; padding: 1rem; margin: 1rem 0; } .field { display: grid; gap: .4rem; margin-bottom: .8rem; } .field input { padding: .6rem .8rem; border-radius: .5rem; border: 1px solid #c8c8c8; } .actions { margin-top: .6rem; } button { padding: .5rem .9rem; border: 1px solid #888; background: #f5f5f5; border-radius: .5rem; cursor: pointer; } button:hover { background: #eee; } .code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 1.4rem; letter-spacing: .15rem; padding: .2rem .4rem; border: 1px dashed #aaa; border-radius: .4rem; } .row { margin: .6rem 0; } .qr { display: flex; align-items: center; gap: 1rem; } .hint { color: #666; font-size: .9rem; }
+
+/* Overlay gagnant */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); color: #fff; display: none; align-items: center; justify-content: center; text-align: center; z-index: 9999; padding: 2rem; }
+.overlay.show { display: flex; }
+.overlay .label { font-size: 1.2rem; opacity: .8; margin-bottom: .5rem; }
+.overlay .winner { font-size: clamp(3rem, 10vw, 8rem); font-weight: 900; letter-spacing: .05em; }
+
+/* Overlay Question (quiz) */
+.overlay .question {
+  font-size: clamp(1.6rem, 5vw, 3rem);
+  font-weight: 800;
+  line-height: 1.2;
+  max-width: 80vw;
+  margin: 0 auto;
+  word-wrap: break-word;
+}
+
+
 /* Range (slider) mobile responsive */
 input[type="range"] {
   width: 100%;
