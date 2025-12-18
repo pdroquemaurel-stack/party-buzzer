@@ -1,0 +1,95 @@
+<!doctype html> <html lang="fr"> <head> <meta charset="utf-8" /> <title>Party Buzzer - TV/Admin</title> <meta name="viewport" content="width=device-width, initial-scale=1" /> <link rel="stylesheet" href="/style.css" /> </head> <body> <main class="container"> <h1>Ecran TV / Administration</h1>
+
+<section class="card">
+  <h2>Salle</h2>
+  <div class="row">
+    <div>
+      <label>Code de salle:</label>
+      <span id="roomCode" class="code"></span>
+      <button id="regenBtn">Regenerer</button>
+      <button id="copyCodeBtn">Copier le code</button>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="field">
+      <label>Base URL (pour generer le lien/QR):</label>
+      <input id="baseUrl" type="text" />
+      <small class="hint">
+        Pour tester depuis un telephone sur le meme Wi‑Fi, remplace par: http://[IP de ton PC]:3000
+      </small>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="field">
+      <label>Lien d'invitation:</label>
+      <a id="joinLink" href="#" target="_blank" rel="noopener"></a>
+      <button id="copyLinkBtn">Copier le lien</button>
+    </div>
+  </div>
+
+  <div class="row qr">
+    <img id="qr" alt="QR code vers la page /join" width="220" height="220" />
+  </div>
+</section>
+
+<section class="card">
+  <h2>Joueurs</h2>
+  <p>Le temps reel arrive a la prochaine etape. Pour l’instant, cette liste est vide.</p>
+  <ul id="players"></ul>
+</section>
+
+<p><a href="/">Retour a l'accueil</a></p>
+</main>
+
+<script> console.log('tv init'); // Debug visible dans F12 > Console
+
+function generateRoomCode(len) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let out = '';
+  for (let i = 0; i < len; i++) out += chars[Math.floor(Math.random() * chars.length)];
+  return out;
+}
+
+const els = {
+  roomCode: document.getElementById('roomCode'),
+  baseUrl: document.getElementById('baseUrl'),
+  joinLink: document.getElementById('joinLink'),
+  qr: document.getElementById('qr'),
+  regenBtn: document.getElementById('regenBtn'),
+  copyCodeBtn: document.getElementById('copyCodeBtn'),
+  copyLinkBtn: document.getElementById('copyLinkBtn')
+};
+
+let room = generateRoomCode(5);
+
+function buildJoinUrl() {
+  const base = els.baseUrl.value.trim().replace(/\/+$/, '');
+  return base + '/join?room=' + encodeURIComponent(room);
+}
+
+function render() {
+  els.roomCode.textContent = room;
+  const joinUrl = buildJoinUrl();
+  els.joinLink.textContent = joinUrl || '(renseigne la Base URL)';
+  els.joinLink.href = joinUrl || '#';
+
+  const qrApi = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=';
+  els.qr.src = joinUrl ? (qrApi + encodeURIComponent(joinUrl)) : '';
+}
+
+window.addEventListener('DOMContentLoaded', function () {
+  els.baseUrl.value = window.location.origin;
+  render();
+
+  els.regenBtn.addEventListener('click', function () { room = generateRoomCode(5); render(); });
+  els.baseUrl.addEventListener('change', render);
+  els.copyCodeBtn.addEventListener('click', async function () {
+    try { await navigator.clipboard.writeText(room); alert('Code copie'); } catch { alert('Copie impossible'); }
+  });
+  els.copyLinkBtn.addEventListener('click', async function () {
+    try { await navigator.clipboard.writeText(buildJoinUrl()); alert('Lien copie'); } catch { alert('Copie impossible'); }
+  });
+});
+</script> </body> </html>

@@ -1,0 +1,11 @@
+{
+  "name": "party-buzzer",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "node server-plain.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,0 +1,50 @@
+<!doctype html> <html lang="fr"> <head> <meta charset="utf-8" /> <title>Party Buzzer - Rejoindre</title> <meta name="viewport" content="width=device-width, initial-scale=1" /> <link rel="stylesheet" href="/style.css" /> </head> <body> <main class="container"> <h1>Rejoindre la partie</h1>
+
+<form id="joinForm" class="card" onsubmit="return false;">
+  <div class="field">
+    <label>Code de salle</label>
+    <input id="room" type="text" inputmode="text" maxlength="8" required />
+  </div>
+  <div class="field">
+    <label>Pseudo</label>
+    <input id="pseudo" type="text" maxlength="16" required />
+  </div>
+  <div class="actions">
+    <button id="joinBtn">Valider</button>
+  </div>
+  <small class="hint">Le temps réel arrive à la prochaine étape. Ce bouton valide juste localement pour l’instant.</small>
+</form>
+
+<section id="joined" class="card" style="display:none;">
+  <p>Tu es prêt·e ! Salle: <strong id="joinedRoom"></strong> — Pseudo: <strong id="joinedPseudo"></strong></p>
+  <button id="buzzBtn" disabled style="font-size:1.4rem;padding:1rem 2rem;">BUZZ</button>
+  <p class="hint">Le bouton sera actif une fois le temps réel en place.</p>
+  <p><a href="/join">Changer de pseudo/salle</a></p>
+</section>
+
+<p><a href="/">Retour à l'accueil</a></p>
+</main>
+
+<script> const qs = new URLSearchParams(window.location.search); const roomParam = (qs.get('room') || '').toUpperCase();
+
+const elRoom = document.getElementById('room');
+const elPseudo = document.getElementById('pseudo');
+const elJoinBtn = document.getElementById('joinBtn');
+const elForm = document.getElementById('joinForm');
+const elJoined = document.getElementById('joined');
+const elJoinedRoom = document.getElementById('joinedRoom');
+const elJoinedPseudo = document.getElementById('joinedPseudo');
+
+if (roomParam) elRoom.value = roomParam;
+
+elJoinBtn.addEventListener('click', () => {
+  const room = elRoom.value.trim().toUpperCase();
+  const pseudo = elPseudo.value.trim();
+  if (!room || !pseudo) { alert('Merci de remplir la salle et le pseudo'); return; }
+  // Pour l’instant, on simule l’inscription locale
+  elJoinedRoom.textContent = room;
+  elJoinedPseudo.textContent = pseudo;
+  elForm.style.display = 'none';
+  elJoined.style.display = '';
+});
+</script> </body> </html>
