@@ -4,6 +4,15 @@ const fs = require('fs');
 const path = require('path');
 const { Server } = require('socket.io');
 
+// Jeux (modules)
+const buzzerGame = require('./server/games/buzzer');
+const quizGame = require('./server/games/quiz');
+
+const games = {
+  buzzer: buzzerGame,
+  quiz: quizGame
+};
+
 const PORT = process.env.PORT || 3000;
 const publicDir = path.join(__dirname, 'public');
 
@@ -56,15 +65,8 @@ const httpServer = http.createServer(serveStatic);
 // Socket.IO
 const io = new Server(httpServer, { cors: { origin: '*' } });
 
-// Etat en mémoire par salle
-// rooms -> {
-//   players: Map<socketId, {name}>,
-//   scores: Map<name, number>,
-//   mode: 'buzzer' | 'quiz',
-//   buzzOpen: boolean,
-//   winner: string|null,
-//   quiz: { open: boolean, question: string, correct: boolean|null, answers: Map<name, boolean> }
-// }
+// Etat par salle:
+// rooms -> { players: Map<socketId,{name}>, scores: Map<name,number>, gameId: 'buzzer'|'quiz', game: any }
 const rooms = new Map();
 
 function getRoom(code) {
@@ -73,11 +75,11 @@ function getRoom(code) {
     r = {
       players: new Map(),
       scores: new Map(),
-      mode: 'buzzer',
-      buzzOpen: false,
-      winner: null,
-      quiz: { open: false, question: '', correct: null, answers: new Map() }
+      gameId: 'buzzer',
+      game: {}
     };
+    // init jeu par défaut
+    games['buzzer'].init(r);
     rooms.set(code, r);
   }
   return r;
@@ -116,6 +118,17 @@ function broadcastPlayers(code) {
   io.to(code).emit('room:players', list);
 }
 
+function ensureGame(code, gameId) {
+  const r = getRoom(code);
+  const id = games[gameId] ? gameId : 'buzzer';
+  r.gameId = id;
+  games[id].init(r);
+  // informer les clients et remettre l'UI à zéro
+  io.to(code).emit('mode:changed', { mode: id });
+  io.to(code).emit('round:reset');
+  return r;
+}
+
 io.on('connection', (socket) => {
   let role = null;      // 'tv' ou 'player'
   let roomCode = null;
@@ -125,11 +138,10 @@ io.on('connection', (socket) => {
   socket.on('tv:create_room', (code) => {
     roomCode = String(code || '').toUpperCase();
     role = 'tv';
-    getRoom(roomCode);
+    const r = getRoom(roomCode);
     socket.join(roomCode);
     socket.emit('room:ready', { code: roomCode });
-    const r = getRoom(roomCode);
-    socket.emit('mode:changed', { mode: r.mode });
+    socket.emit('mode:changed', { mode: r.gameId });
     broadcastPlayers(roomCode);
   });
 
@@ -150,24 +162,14 @@ io.on('connection', (socket) => {
     socket.join(code);
     ack && ack({ ok: true, name: finalName });
 
-    // Envoyer le mode actuel au joueur
-    socket.emit('mode:changed', { mode: r.mode });
-
+    socket.emit('mode:changed', { mode: r.gameId });
     broadcastPlayers(code);
   });
 
-  // Changer de mode (admin only)
+  // Changer de jeu (admin only)
   socket.on('mode:set', ({ mode }) => {
     if (role !== 'tv' || !roomCode) return;
-    const m = mode === 'quiz' ? 'quiz' : 'buzzer';
-    const r = getRoom(roomCode);
-    r.mode = m;
-    // Réinitialiser états de round
-    r.buzzOpen = false;
-    r.winner = null;
-    r.quiz = { open: false, question: '', correct: null, answers: new Map() };
-    io.to(roomCode).emit('mode:changed', { mode: m });
-    io.to(roomCode).emit('round:reset');
+    ensureGame(roomCode, mode);
   });
 
   // Compte à rebours (rebroadcast)
@@ -181,34 +183,16 @@ io.on('connection', (socket) => {
   socket.on('buzz:open', () => {
     if (role !== 'tv' || !roomCode) return;
     const r = getRoom(roomCode);
-    r.buzzOpen = true;
-    r.winner = null;
-    io.to(roomCode).emit('round:open');
+    if (r.gameId !== 'buzzer') return; // on ignore si pas en mode buzzer
+    games.buzzer.adminOpen(io, r, roomCode);
   });
 
-  // BUZZER — appuyer
-  socket.on('buzz:press', (ack) => {
-    if (!roomCode) { ack && ack({ ok: false }); return; }
-    const r = getRoom(roomCode);
-    if (!r.buzzOpen || r.winner) { ack && ack({ ok: false }); return; }
-    const name = playerName || 'Joueur';
-    r.buzzOpen = false;
-    r.winner = name;
-
-    const newScore = (r.scores.get(name) || 0) + 1;
-    r.scores.set(name, newScore);
-
-    io.to(roomCode).emit('round:winner', { name, score: newScore });
-    broadcastPlayers(roomCode);
-    ack && ack({ ok: true, winner: name });
-  });
-
-  // BUZZER — reset (admin only)
+  // BUZZER — reset tour (admin only)
   socket.on('round:reset', () => {
     if (role !== 'tv' || !roomCode) return;
     const r = getRoom(roomCode);
-    r.buzzOpen = false;
-    r.winner = null;
+    // réinit l'état du jeu courant et informer les clients
+    games[r.gameId].init(r);
     io.to(roomCode).emit('round:reset');
   });
 
@@ -223,55 +207,38 @@ io.on('connection', (socket) => {
     broadcastPlayers(roomCode);
   });
 
+  // BUZZER — appuyer
+  socket.on('buzz:press', (ack) => {
+    if (!roomCode) { ack && ack({ ok: false }); return; }
+    const r = getRoom(roomCode);
+    if (r.gameId !== 'buzzer') { ack && ack({ ok: false }); return; }
+    games.buzzer.playerPress(io, r, roomCode, (playerName || 'Joueur'), ack, broadcastPlayers);
+  });
+
   // QUIZ — démarrer une question (admin only)
   socket.on('quiz:start', ({ question, correct, seconds }) => {
     if (role !== 'tv' || !roomCode) return;
-    const q = String(question || '').trim().slice(0, 200);
-    const c = !!correct;
-    const r = getRoom(roomCode);
-    r.mode = 'quiz';
-    r.quiz = { open: true, question: q, correct: c, answers: new Map() };
-    io.to(roomCode).emit('mode:changed', { mode: 'quiz' });
-    io.to(roomCode).emit('quiz:question', { question: q, seconds: Math.max(1, Math.min(30, parseInt(seconds, 10) || 5)) });
+    let r = getRoom(roomCode);
+    if (r.gameId !== 'quiz') {
+      r = ensureGame(roomCode, 'quiz'); // bascule et reset UI
+    }
+    games.quiz.adminStart(io, r, roomCode, { question, correct, seconds });
   });
 
   // QUIZ — réponse d'un joueur
   socket.on('quiz:answer', ({ answer }, ack) => {
     if (!roomCode) { ack && ack({ ok: false }); return; }
     const r = getRoom(roomCode);
-    if (!r.quiz.open) { ack && ack({ ok: false }); return; }
-    const name = playerName || 'Joueur';
-    if (!r.quiz.answers.has(name)) {
-      r.quiz.answers.set(name, !!answer); // première réponse seulement
-    }
-    ack && ack({ ok: true });
+    if (r.gameId !== 'quiz') { ack && ack({ ok: false }); return; }
+    games.quiz.playerAnswer(io, r, roomCode, (playerName || 'Joueur'), !!answer, ack);
   });
 
-  // QUIZ — clôturer et corriger (admin only)
+  // QUIZ — clore et corriger (admin only)
   socket.on('quiz:close', () => {
     if (role !== 'tv' || !roomCode) return;
     const r = getRoom(roomCode);
-    if (!r.quiz.open) return;
-    r.quiz.open = false;
-
-    let countTrue = 0, countFalse = 0, winners = [];
-    r.quiz.answers.forEach((ans, name) => {
-      if (ans) countTrue++; else countFalse++;
-      if (ans === r.quiz.correct) winners.push(name);
-    });
-
-    // +1 aux gagnants
-    winners.forEach(name => {
-      r.scores.set(name, (r.scores.get(name) || 0) + 1);
-    });
-
-    io.to(roomCode).emit('quiz:result', {
-      correct: r.quiz.correct,
-      countTrue,
-      countFalse,
-      total: countTrue + countFalse
-    });
-    broadcastPlayers(roomCode);
+    if (r.gameId !== 'quiz') return;
+    games.quiz.adminClose(io, r, roomCode, broadcastPlayers);
   });
 
   // Déconnexion
