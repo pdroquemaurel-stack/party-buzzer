@@ -25,11 +25,22 @@
       <small class="hint">Scanne le QR sur l'ecran TV pour pre-remplir la salle.</small>
     </form>
 
+    <!-- Buzzer -->
     <section id="joined" class="card" style="display:none;">
       <p>Salle: <strong id="joinedRoom"></strong> — Pseudo: <strong id="joinedPseudo"></strong></p>
       <button id="buzzBtn" style="font-size:1.4rem;padding:1rem 2rem; width:100%;">BUZZ</button>
       <p id="roundState" class="hint"></p>
       <p><a href="/join">Changer de pseudo/salle</a></p>
+    </section>
+
+    <!-- Quiz -->
+    <section id="quizPanel" class="card" style="display:none;">
+      <p><strong id="quizQ"></strong></p>
+      <div class="row" style="display:flex; gap:1rem; flex-wrap:wrap;">
+        <button id="btnTrue" style="flex:1; min-width:120px; padding:1rem; font-size:1.1rem;">Vrai</button>
+        <button id="btnFalse" style="flex:1; min-width:120px; padding:1rem; font-size:1.1rem;">Faux</button>
+      </div>
+      <p id="quizInfo" class="hint"></p>
     </section>
 
     <p><a href="/">Retour a l'accueil</a></p>
@@ -44,15 +55,25 @@
     const elPseudo = document.getElementById('pseudo');
     const elJoinBtn = document.getElementById('joinBtn');
     const elForm = document.getElementById('joinForm');
+
     const elJoined = document.getElementById('joined');
     const elJoinedRoom = document.getElementById('joinedRoom');
     const elJoinedPseudo = document.getElementById('joinedPseudo');
     const elBuzz = document.getElementById('buzzBtn');
     const elRoundState = document.getElementById('roundState');
 
+    const elQuizPanel = document.getElementById('quizPanel');
+    const elQuizQ = document.getElementById('quizQ');
+    const elBtnTrue = document.getElementById('btnTrue');
+    const elBtnFalse = document.getElementById('btnFalse');
+    const elQuizInfo = document.getElementById('quizInfo');
+
     if (roomParam) elRoom.value = roomParam;
 
     let socket = null;
+    let currentRoom = null;
+    let currentMode = 'buzzer';
+    let quizAnswered = null; // true/false/null
     let cdInt = null;
 
     function setBuzzEnabled(on) {
@@ -60,8 +81,27 @@
       elBuzz.style.opacity = on ? '1' : '0.6';
     }
 
+    function setQuizEnabled(on) {
+      elBtnTrue.disabled = !on;
+      elBtnFalse.disabled = !on;
+      const op = on ? '1' : '0.6';
+      elBtnTrue.style.opacity = op;
+      elBtnFalse.style.opacity = op;
+    }
+
     function stopCountdown() {
       if (cdInt) { clearInterval(cdInt); cdInt = null; }
+    }
+
+    function setModeUI(mode) {
+      currentMode = mode;
+      if (mode === 'quiz') {
+        elQuizPanel.style.display = '';
+        elJoined.style.display = 'none';
+      } else {
+        elQuizPanel.style.display = 'none';
+        elJoined.style.display = '';
+      }
     }
 
     elJoinBtn.addEventListener('click', () => {
@@ -72,56 +112,110 @@
       socket = io();
       socket.emit('player:join', { room, name: pseudo }, (res) => {
         if (!res || !res.ok) { alert('Impossible de rejoindre'); return; }
+        currentRoom = room;
         elJoinedRoom.textContent = room;
         elJoinedPseudo.textContent = res.name;
         elForm.style.display = 'none';
+
+        // Par défaut, on affiche Buzzer panel; mode:changed ajustera
         elJoined.style.display = '';
         setBuzzEnabled(false);
         elRoundState.textContent = 'En attente du debut de tour...';
       });
 
+      // Mode
+      socket.on('mode:changed', ({ mode }) => {
+        setModeUI(mode);
+        elQuizInfo.textContent = '';
+        if (mode === 'buzzer') {
+          setBuzzEnabled(false);
+          elRoundState.textContent = 'Mode Buzzer — en attente du tour...';
+        } else {
+          setQuizEnabled(false);
+          elQuizInfo.textContent = 'Mode Quiz — en attente de la question...';
+        }
+      });
+
+      // Compte à rebours générique (affiché en texte ici)
       socket.on('countdown:start', ({ seconds }) => {
         stopCountdown();
         let remain = seconds || 3;
-        setBuzzEnabled(false);
-        elRoundState.textContent = 'Debut dans ' + remain + '...';
+        if (currentMode === 'buzzer') {
+          setBuzzEnabled(false);
+          elRoundState.textContent = 'Debut dans ' + remain + '...';
+        } else {
+          setQuizEnabled(false);
+          elQuizInfo.textContent = 'Debut dans ' + remain + '...';
+        }
         cdInt = setInterval(() => {
           remain--;
           if (remain > 0) {
-            elRoundState.textContent = 'Debut dans ' + remain + '...';
+            if (currentMode === 'buzzer') elRoundState.textContent = 'Debut dans ' + remain + '...';
+            else elQuizInfo.textContent = 'Debut dans ' + remain + '...';
           } else {
             stopCountdown();
-            // L'ouverture officielle arrive via 'round:open'
           }
         }, 1000);
       });
 
+      // Buzzer
       socket.on('round:open', () => {
         stopCountdown();
-        setBuzzEnabled(true);
-        elRoundState.textContent = 'Tour ouvert !';
+        if (currentMode === 'buzzer') {
+          setBuzzEnabled(true);
+          elRoundState.textContent = 'Tour ouvert !';
+        }
       });
-
       socket.on('round:winner', (data) => {
         setBuzzEnabled(false);
         elRoundState.textContent = `Gagnant: ${data.name}`;
       });
-
       socket.on('round:reset', () => {
         stopCountdown();
-        setBuzzEnabled(false);
-        elRoundState.textContent = 'Tour reinitialise. En attente...';
+        if (currentMode === 'buzzer') {
+          setBuzzEnabled(false);
+          elRoundState.textContent = 'Tour reinitialise. En attente...';
+        } else {
+          setQuizEnabled(false);
+          elQuizInfo.textContent = 'Question reinitialisee. En attente...';
+        }
       });
 
-      socket.on('scores:reset', () => {
-        // Rien de spécial ici; l'info est utile surtout pour la TV
+      // Quiz
+      socket.on('quiz:question', ({ question, seconds }) => {
+        quizAnswered = null;
+        elQuizQ.textContent = question;
+        setQuizEnabled(true);
+        elQuizInfo.textContent = `Reponds maintenant (${seconds}s)`;
+      });
+      socket.on('quiz:result', ({ correct, countTrue, countFalse, total }) => {
+        setQuizEnabled(false);
+        const correctText = correct ? 'Vrai' : 'Faux';
+        const me = quizAnswered == null ? '' : (quizAnswered === correct ? ' — Bravo, +1 !' : ' — Mauvaise reponse.');
+        elQuizInfo.textContent = `Bonne reponse: ${correctText} — Vrai: ${countTrue}, Faux: ${countFalse}, Total: ${total}${me}`;
       });
     });
 
+    // Actions
     elBuzz.addEventListener('click', () => {
       if (!socket) return;
-      setBuzzEnabled(false); // éviter double clic
+      setBuzzEnabled(false);
       socket.emit('buzz:press', () => {});
+    });
+
+    elBtnTrue.addEventListener('click', () => {
+      if (!socket) return;
+      setQuizEnabled(false);
+      quizAnswered = true;
+      elQuizInfo.textContent = 'Reponse envoyee: Vrai';
+      socket.emit('quiz:answer', { answer: true }, () => {});
+    });
+    elBtnFalse.addEventListener('click', () => {
+      if (!socket) return;
+      setQuizEnabled(false);
+      quizAnswered = false;
+      elQuizInfo.textContent = 'Reponse envoyee: Faux';
+      socket.emit('quiz:answer', { answer: false }, () => {});
     });
   </script>
 </body>

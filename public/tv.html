@@ -43,13 +43,42 @@
     </section>
 
     <section class="card">
-      <h2>Partie</h2>
+      <h2>Mode de jeu</h2>
+      <div class="row">
+        <label><input type="radio" name="mode" value="buzzer" checked /> Buzzer</label>
+        <label style="margin-left:1rem;"><input type="radio" name="mode" value="quiz" /> Quiz Vrai/Faux</label>
+      </div>
+    </section>
+
+    <section id="buzzerPanel" class="card">
+      <h2>Buzzer</h2>
       <div class="row">
         <button id="startRoundBtn">Demarrer le tour</button>
         <button id="resetRoundBtn">Reinitialiser le tour</button>
         <button id="resetScoresBtn">Reinitialiser les scores</button>
       </div>
       <div id="status" class="row"></div>
+    </section>
+
+    <section id="quizPanel" class="card" style="display:none;">
+      <h2>Quiz Vrai/Faux</h2>
+      <div class="field">
+        <label>Question</label>
+        <input id="quizQuestion" type="text" placeholder="Ex: Le Soleil est une étoile ?" />
+      </div>
+      <div class="row">
+        <label><input type="radio" name="quizCorrect" id="quizTrue" value="true" checked /> Vrai</label>
+        <label style="margin-left:1rem;"><input type="radio" name="quizCorrect" id="quizFalse" value="false" /> Faux</label>
+      </div>
+      <div class="field">
+        <label>Durée (secondes)</label>
+        <input id="quizSeconds" type="number" min="1" max="30" value="5" />
+      </div>
+      <div class="row">
+        <button id="quizStartBtn">Poser la question (3-2-1)</button>
+        <button id="quizCloseBtn">Clore et corriger maintenant</button>
+      </div>
+      <div id="quizInfo" class="row hint"></div>
     </section>
 
     <section class="card">
@@ -60,7 +89,7 @@
     <p><a href="/">Retour a l'accueil</a></p>
   </main>
 
-  <!-- Overlay gagnant -->
+  <!-- Overlays -->
   <div id="overlay" class="overlay" onclick="this.classList.remove('show')">
     <div>
       <div class="label">Gagnant</div>
@@ -69,7 +98,6 @@
     </div>
   </div>
 
-  <!-- Overlay compte à rebours -->
   <div id="countdown" class="overlay">
     <div>
       <div class="label">Debut dans</div>
@@ -113,6 +141,8 @@
       copyCodeBtn: document.getElementById('copyCodeBtn'),
       copyLinkBtn: document.getElementById('copyLinkBtn'),
       players: document.getElementById('players'),
+
+      // Buzzer
       status: document.getElementById('status'),
       startRoundBtn: document.getElementById('startRoundBtn'),
       resetRoundBtn: document.getElementById('resetRoundBtn'),
@@ -120,7 +150,19 @@
       overlay: document.getElementById('overlay'),
       winnerName: document.getElementById('winnerName'),
       countdown: document.getElementById('countdown'),
-      countNum: document.getElementById('countNum')
+      countNum: document.getElementById('countNum'),
+
+      // Mode/Quiz
+      modeRadios: document.getElementsByName('mode'),
+      buzzerPanel: document.getElementById('buzzerPanel'),
+      quizPanel: document.getElementById('quizPanel'),
+      quizQuestion: document.getElementById('quizQuestion'),
+      quizTrue: document.getElementById('quizTrue'),
+      quizFalse: document.getElementById('quizFalse'),
+      quizSeconds: document.getElementById('quizSeconds'),
+      quizStartBtn: document.getElementById('quizStartBtn'),
+      quizCloseBtn: document.getElementById('quizCloseBtn'),
+      quizInfo: document.getElementById('quizInfo')
     };
 
     const socket = io();
@@ -151,16 +193,14 @@
       });
     }
 
-    function setStatus(text) {
-      els.status.textContent = text || '';
-    }
+    function setStatus(text) { els.status.textContent = text || ''; }
 
     function stopCountdownUI() {
       if (cdTimer) { clearInterval(cdTimer); cdTimer = null; }
       els.countdown.classList.remove('show');
     }
 
-    function startCountdown(sec = 3) {
+    function startCountdown(sec = 3, onEnd) {
       stopCountdownUI();
       cdRemain = sec;
       els.countNum.textContent = cdRemain;
@@ -175,26 +215,45 @@
         } else {
           stopCountdownUI();
           playBeep(1200, 200); // GO!
-          socket.emit('buzz:open'); // ouverture officielle du tour
+          if (typeof onEnd === 'function') onEnd();
         }
       }, 1000);
+    }
+
+    function setModeUI(mode) {
+      const isQuiz = mode === 'quiz';
+      els.quizPanel.style.display = isQuiz ? '' : 'none';
+      els.buzzerPanel.style.display = isQuiz ? 'none' : '';
+      for (const r of els.modeRadios) r.checked = (r.value === mode);
     }
 
     window.addEventListener('DOMContentLoaded', function () {
       els.baseUrl.value = window.location.origin;
       renderInvite();
 
-      // Connecter la TV a la salle
       socket.emit('tv:create_room', room);
 
+      // Mode radio -> serveur
+      for (const r of els.modeRadios) {
+        r.addEventListener('change', () => {
+          if (r.checked) socket.emit('mode:set', { mode: r.value });
+        });
+      }
+
       // Events Socket.IO
-      socket.on('room:ready', () => { setStatus('Salle prete.'); });
-      socket.on('room:players', renderPlayers);
-      socket.on('countdown:start', (data) => {
-        // La TV pilote déjà le compte à rebours local; on ignore côté TV
-      });
-      socket.on('round:open', () => {
+      socket.on('mode:changed', ({ mode }) => {
+        setModeUI(mode);
+        els.overlay.classList.remove('show');
         stopCountdownUI();
+        els.quizInfo.textContent = '';
+        setStatus(mode === 'quiz' ? 'Mode Quiz' : 'Mode Buzzer');
+      });
+
+      socket.on('room:ready', () => { /* noop */ });
+      socket.on('room:players', renderPlayers);
+
+      // Buzzer
+      socket.on('round:open', () => {
         els.overlay.classList.remove('show');
         setStatus('Tour ouvert: le plus rapide gagne !');
       });
@@ -205,15 +264,27 @@
         playBeep(1200, 200);
       });
       socket.on('round:reset', () => {
-        stopCountdownUI();
         els.overlay.classList.remove('show');
+        stopCountdownUI();
         setStatus('Tour reinitialise.');
       });
       socket.on('scores:reset', () => {
         setStatus('Scores reinitialises');
       });
 
-      // UI
+      // Quiz
+      socket.on('quiz:question', ({ question, seconds }) => {
+        els.quizInfo.textContent = `Question en cours (${seconds}s): "${question}"`;
+      });
+      socket.on('quiz:result', ({ correct, countTrue, countFalse, total }) => {
+        const correctText = correct ? 'Vrai' : 'Faux';
+        els.quizInfo.textContent = `Bonne reponse: ${correctText} — Vrai: ${countTrue}, Faux: ${countFalse}, Total: ${total}`;
+      });
+      socket.on('countdown:start', ({ seconds }) => {
+        // La TV pilote déjà localement; on ignore ce rebroadcast côté TV
+      });
+
+      // UI actions
       els.regenBtn.addEventListener('click', () => {
         room = generateRoomCode(5);
         renderInvite();
@@ -226,9 +297,24 @@
       els.copyLinkBtn.addEventListener('click', async () => {
         try { await navigator.clipboard.writeText(buildJoinUrl()); alert('Lien copie'); } catch {}
       });
-      els.startRoundBtn.addEventListener('click', () => startCountdown(3));
+
+      // Buzzer boutons
+      els.startRoundBtn.addEventListener('click', () => startCountdown(3, () => socket.emit('buzz:open')));
       els.resetRoundBtn.addEventListener('click', () => socket.emit('round:reset'));
       els.resetScoresBtn.addEventListener('click', () => socket.emit('scores:reset'));
+
+      // Quiz boutons
+      els.quizStartBtn.addEventListener('click', () => {
+        const q = els.quizQuestion.value.trim();
+        const correct = els.quizTrue.checked;
+        const seconds = Math.max(1, Math.min(30, parseInt(els.quizSeconds.value || '5', 10)));
+        if (!q) { alert('Entre une question'); return; }
+        socket.emit('mode:set', { mode: 'quiz' });
+        socket.emit('quiz:start', { question: q, correct, seconds });
+        startCountdown(seconds, () => socket.emit('quiz:close'));
+      });
+
+      els.quizCloseBtn.addEventListener('click', () => socket.emit('quiz:close'));
     });
   </script>
 </body>
