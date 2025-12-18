@@ -7,3 +7,13 @@
 .overlay.show { display: flex; }
 .overlay .label { font-size: 1.2rem; opacity: .8; margin-bottom: .5rem; }
 .overlay .winner { font-size: clamp(3rem, 10vw, 8rem); font-weight: 900; letter-spacing: .05em; }
+
+/* Overlay Question (quiz) */
+.overlay .question {
+  font-size: clamp(1.6rem, 5vw, 3rem);
+  font-weight: 800;
+  line-height: 1.2;
+  max-width: 80vw;
+  margin: 0 auto;
+  word-wrap: break-word;
+}

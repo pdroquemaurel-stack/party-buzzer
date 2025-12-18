@@ -62,6 +62,16 @@
 
     <section id="quizPanel" class="card" style="display:none;">
       <h2>Quiz Vrai/Faux</h2>
+
+      <div class="card" style="background:#fafafa;">
+        <h3 style="margin-top:0;">Banque de questions (facultatif)</h3>
+        <div class="row" style="display:flex; gap:.5rem; flex-wrap:wrap;">
+          <button id="quizLoadBtn">Charger la banque</button>
+          <button id="quizRandomBtn" disabled>Question aléatoire</button>
+          <span id="quizLoadedInfo" class="hint"></span>
+        </div>
+      </div>
+
       <div class="field">
         <label>Question</label>
         <input id="quizQuestion" type="text" placeholder="Ex: Le Soleil est une étoile ?" />
@@ -90,6 +100,7 @@
   </main>
 
   <!-- Overlays -->
+  <!-- Gagnant (buzzer) -->
   <div id="overlay" class="overlay" onclick="this.classList.remove('show')">
     <div>
       <div class="label">Gagnant</div>
@@ -98,10 +109,20 @@
     </div>
   </div>
 
+  <!-- Compte à rebours (buzzer uniquement) -->
   <div id="countdown" class="overlay">
     <div>
       <div class="label">Debut dans</div>
       <div id="countNum" class="winner"></div>
+    </div>
+  </div>
+
+  <!-- Overlay Question (quiz) -->
+  <div id="quizQOverlay" class="overlay">
+    <div>
+      <div class="label">Question</div>
+      <div id="quizQText" class="question"></div>
+      <div id="quizTimer" class="hint" style="margin-top:.8rem;"></div>
     </div>
   </div>
 
@@ -141,6 +162,8 @@
       copyCodeBtn: document.getElementById('copyCodeBtn'),
       copyLinkBtn: document.getElementById('copyLinkBtn'),
       players: document.getElementById('players'),
+
+      // Buzzer
       status: document.getElementById('status'),
       startRoundBtn: document.getElementById('startRoundBtn'),
       resetRoundBtn: document.getElementById('resetRoundBtn'),
@@ -149,6 +172,8 @@
       winnerName: document.getElementById('winnerName'),
       countdown: document.getElementById('countdown'),
       countNum: document.getElementById('countNum'),
+
+      // Mode/Quiz
       modeRadios: document.getElementsByName('mode'),
       buzzerPanel: document.getElementById('buzzerPanel'),
       quizPanel: document.getElementById('quizPanel'),
@@ -158,13 +183,28 @@
       quizSeconds: document.getElementById('quizSeconds'),
       quizStartBtn: document.getElementById('quizStartBtn'),
       quizCloseBtn: document.getElementById('quizCloseBtn'),
-      quizInfo: document.getElementById('quizInfo')
+      quizInfo: document.getElementById('quizInfo'),
+
+      // Banque
+      quizLoadBtn: document.getElementById('quizLoadBtn'),
+      quizRandomBtn: document.getElementById('quizRandomBtn'),
+      quizLoadedInfo: document.getElementById('quizLoadedInfo'),
+
+      // Overlay Quiz
+      quizQOverlay: document.getElementById('quizQOverlay'),
+      quizQText: document.getElementById('quizQText'),
+      quizTimer: document.getElementById('quizTimer')
     };
 
     const socket = io();
     let room = generateRoomCode(5);
-    let cdTimer = null;
-    let cdRemain = 0;
+
+    // Timers
+    let cdTimer = null;     // pour overlay buzzer
+    let quizTimer = null;   // pour timer quiz sur TV
+
+    // Banque
+    let questionBank = [];
 
     function buildJoinUrl() {
       const base = els.baseUrl.value.trim().replace(/\/+$/, '');
@@ -198,19 +238,19 @@
 
     function startCountdown(sec = 3, onEnd) {
       stopCountdownUI();
-      cdRemain = sec;
-      els.countNum.textContent = cdRemain;
+      els.countNum.textContent = sec;
       els.countdown.classList.add('show');
-      socket.emit('countdown:start', sec); // informer les joueurs
+      socket.emit('countdown:start', sec);
       playBeep(700, 120);
+      let remain = sec;
       cdTimer = setInterval(() => {
-        cdRemain--;
-        if (cdRemain > 0) {
-          els.countNum.textContent = cdRemain;
+        remain--;
+        if (remain > 0) {
+          els.countNum.textContent = remain;
           playBeep(700, 120);
         } else {
           stopCountdownUI();
-          playBeep(1200, 200); // GO!
+          playBeep(1200, 200);
           if (typeof onEnd === 'function') onEnd();
         }
       }, 1000);
@@ -223,29 +263,53 @@
       for (const r of els.modeRadios) r.checked = (r.value === mode);
     }
 
+    function showQuizOverlay(question, seconds) {
+      // Affiche la question et un timer visible
+      if (quizTimer) { clearInterval(quizTimer); quizTimer = null; }
+      els.quizQText.textContent = question;
+      let remain = seconds || 5;
+      els.quizTimer.textContent = `Temps restant: ${remain}s`;
+      els.quizQOverlay.classList.add('show');
+      quizTimer = setInterval(() => {
+        remain--;
+        if (remain > 0) {
+          els.quizTimer.textContent = `Temps restant: ${remain}s`;
+        } else {
+          clearInterval(quizTimer); quizTimer = null;
+        }
+      }, 1000);
+    }
+
+    function hideQuizOverlay() {
+      if (quizTimer) { clearInterval(quizTimer); quizTimer = null; }
+      els.quizQOverlay.classList.remove('show');
+      els.quizTimer.textContent = '';
+    }
+
     window.addEventListener('DOMContentLoaded', function () {
       els.baseUrl.value = window.location.origin;
       renderInvite();
 
       socket.emit('tv:create_room', room);
 
-      // Radios mode -> serveur (changement manuel de mode)
+      // Radios mode -> serveur
       for (const r of els.modeRadios) {
         r.addEventListener('change', () => {
           if (r.checked) socket.emit('mode:set', { mode: r.value });
         });
       }
 
-      // Events Socket.IO
+      // Events Socket.IO communs
       socket.on('mode:changed', ({ mode }) => {
         setModeUI(mode);
         els.overlay.classList.remove('show');
-        // Ne PAS stop le countdown ici (sinon ça coupe le 3-2-1 du quiz)
+        stopCountdownUI();
+        hideQuizOverlay();
         els.quizInfo.textContent = '';
         setStatus(mode === 'quiz' ? 'Mode Quiz' : 'Mode Buzzer');
       });
-
       socket.on('room:players', renderPlayers);
+      socket.on('scores:reset', () => setStatus('Scores reinitialises'));
 
       // Buzzer
       socket.on('round:open', () => {
@@ -261,23 +325,24 @@
       socket.on('round:reset', () => {
         els.overlay.classList.remove('show');
         stopCountdownUI();
-        setStatus('Tour reinitialise.');
-      });
-      socket.on('scores:reset', () => {
-        setStatus('Scores reinitialises');
+        hideQuizOverlay();
+        setStatus('Tour/Question reinitialise.');
       });
 
       // Quiz
       socket.on('quiz:question', ({ question, seconds }) => {
+        // Affiche la question en grand le temps de la manche
+        setModeUI('quiz');
         els.quizInfo.textContent = `Question en cours (${seconds}s): "${question}"`;
+        showQuizOverlay(question, seconds);
       });
       socket.on('quiz:result', ({ correct, countTrue, countFalse, total }) => {
+        hideQuizOverlay();
         const correctText = correct ? 'Vrai' : 'Faux';
         els.quizInfo.textContent = `Bonne reponse: ${correctText} — Vrai: ${countTrue}, Faux: ${countFalse}, Total: ${total}`;
       });
-      socket.on('countdown:start', ({ seconds }) => { /* la TV pilote déjà localement */ });
 
-      // UI actions
+      // UI Salle/Invitations
       els.regenBtn.addEventListener('click', () => {
         room = generateRoomCode(5);
         renderInvite();
@@ -291,21 +356,53 @@
         try { await navigator.clipboard.writeText(buildJoinUrl()); alert('Lien copie'); } catch {}
       });
 
-      // Buzzer boutons
+      // Buzzer actions
       els.startRoundBtn.addEventListener('click', () => startCountdown(3, () => socket.emit('buzz:open')));
       els.resetRoundBtn.addEventListener('click', () => socket.emit('round:reset'));
       els.resetScoresBtn.addEventListener('click', () => socket.emit('scores:reset'));
 
-      // Quiz boutons
+      // Banque de questions
+      els.quizLoadBtn.addEventListener('click', async () => {
+        try {
+          const res = await fetch('/questions.json', { cache: 'no-store' });
+          const data = await res.json();
+          if (!Array.isArray(data)) throw new Error('Format invalide (attendu: tableau)');
+          questionBank = data;
+          els.quizLoadedInfo.textContent = `${questionBank.length} question(s) chargée(s).`;
+          els.quizRandomBtn.disabled = questionBank.length === 0;
+        } catch (e) {
+          alert('Impossible de charger /questions.json');
+          questionBank = [];
+          els.quizLoadedInfo.textContent = '';
+          els.quizRandomBtn.disabled = true;
+        }
+      });
+
+      els.quizRandomBtn.addEventListener('click', () => {
+        if (!questionBank.length) return;
+        const idx = Math.floor(Math.random() * questionBank.length);
+        const item = questionBank[idx];
+        els.quizQuestion.value = item.q || '';
+        if (item.a) { els.quizTrue.checked = true; } else { els.quizFalse.checked = true; }
+      });
+
+      // Quiz actions
       els.quizStartBtn.addEventListener('click', () => {
         const q = els.quizQuestion.value.trim();
         const correct = els.quizTrue.checked;
         const seconds = Math.max(1, Math.min(30, parseInt(els.quizSeconds.value || '5', 10)));
         if (!q) { alert('Entre une question'); return; }
-        // Important: ne pas émettre mode:set ici (quiz:start règle le mode côté serveur)
+
+        // Démarre officiellement la question
         socket.emit('quiz:start', { question: q, correct, seconds });
-        startCountdown(seconds, () => socket.emit('quiz:close'));
+
+        // Lance le chrono pour tous (mobiles) et affiche le timer sur l’overlay Question (via quiz:question + countdown côté clients)
+        socket.emit('countdown:start', seconds);
+
+        // Clôture automatique à la fin
+        setTimeout(() => socket.emit('quiz:close'), seconds * 1000);
       });
+
       els.quizCloseBtn.addEventListener('click', () => socket.emit('quiz:close'));
     });
   </script>
