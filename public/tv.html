@@ -15,9 +15,7 @@
     <div class="field">
       <label>Base URL (pour generer le lien/QR):</label>
       <input id="baseUrl" type="text" />
-      <small class="hint">
-        Pour tester depuis un telephone sur le meme Wi‑Fi, remplace par: http://[IP de ton PC]:3000
-      </small>
+      <small class="hint">Utilise l'URL Render (https://...onrender.com)</small>
     </div>
   </div>
 
@@ -30,27 +28,28 @@
   </div>
 
   <div class="row qr">
-    <img id="qr" alt="QR code vers la page /join" width="220" height="220" />
+    <img id="qr" alt="QR code vers /join" width="220" height="220" />
   </div>
 </section>
 
 <section class="card">
+  <h2>Partie</h2>
+  <div class="row">
+    <button id="startRoundBtn">Demarrer le tour</button>
+    <button id="resetRoundBtn">Reinitialiser le tour</button>
+  </div>
+  <div id="status" class="row"></div>
+</section>
+
+<section class="card">
   <h2>Joueurs</h2>
-  <p>Le temps reel arrive a la prochaine etape. Pour l’instant, cette liste est vide.</p>
   <ul id="players"></ul>
 </section>
 
 <p><a href="/">Retour a l'accueil</a></p>
 </main>
 
-<script> console.log('tv init'); // Debug visible dans F12 > Console
-
-function generateRoomCode(len) {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let out = '';
-  for (let i = 0; i < len; i++) out += chars[Math.floor(Math.random() * chars.length)];
-  return out;
-}
+<script src="/socket.io/socket.io.js"></script> <script> function generateRoomCode(len) { const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let out = ''; for (let i = 0; i < len; i++) out += chars[Math.floor(Math.random() * chars.length)]; return out; }
 
 const els = {
   roomCode: document.getElementById('roomCode'),
@@ -59,37 +58,71 @@ const els = {
   qr: document.getElementById('qr'),
   regenBtn: document.getElementById('regenBtn'),
   copyCodeBtn: document.getElementById('copyCodeBtn'),
-  copyLinkBtn: document.getElementById('copyLinkBtn')
+  copyLinkBtn: document.getElementById('copyLinkBtn'),
+  players: document.getElementById('players'),
+  status: document.getElementById('status'),
+  startRoundBtn: document.getElementById('startRoundBtn'),
+  resetRoundBtn: document.getElementById('resetRoundBtn')
 };
 
 let room = generateRoomCode(5);
+const socket = io();
 
 function buildJoinUrl() {
   const base = els.baseUrl.value.trim().replace(/\/+$/, '');
   return base + '/join?room=' + encodeURIComponent(room);
 }
 
-function render() {
+function renderInvite() {
   els.roomCode.textContent = room;
   const joinUrl = buildJoinUrl();
   els.joinLink.textContent = joinUrl || '(renseigne la Base URL)';
   els.joinLink.href = joinUrl || '#';
-
   const qrApi = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=';
   els.qr.src = joinUrl ? (qrApi + encodeURIComponent(joinUrl)) : '';
 }
 
+function renderPlayers(list) {
+  els.players.innerHTML = '';
+  (list || []).forEach(p => {
+    const li = document.createElement('li');
+    li.textContent = `${p.name} — ${p.score} pt${p.score>1?'s':''}${p.connected?' (en ligne)':''}`;
+    els.players.appendChild(li);
+  });
+}
+
+function setStatus(text) {
+  els.status.textContent = text || '';
+}
+
 window.addEventListener('DOMContentLoaded', function () {
   els.baseUrl.value = window.location.origin;
-  render();
+  renderInvite();
 
-  els.regenBtn.addEventListener('click', function () { room = generateRoomCode(5); render(); });
-  els.baseUrl.addEventListener('change', render);
-  els.copyCodeBtn.addEventListener('click', async function () {
-    try { await navigator.clipboard.writeText(room); alert('Code copie'); } catch { alert('Copie impossible'); }
+  // Connecter la TV a la salle
+  socket.emit('tv:create_room', room);
+
+  // Events Socket.IO
+  socket.on('room:ready', () => { setStatus('Salle prete.'); });
+  socket.on('room:players', renderPlayers);
+  socket.on('round:open', () => setStatus('Tour ouvert: le plus rapide gagne !'));
+  socket.on('round:winner', (data) => setStatus(`Gagnant: ${data.name} (+1)`));
+  socket.on('round:reset', () => setStatus('Tour reinitialise.'));
+
+  // UI
+  els.regenBtn.addEventListener('click', () => {
+    room = generateRoomCode(5);
+    renderInvite();
+    socket.emit('tv:create_room', room);
   });
-  els.copyLinkBtn.addEventListener('click', async function () {
-    try { await navigator.clipboard.writeText(buildJoinUrl()); alert('Lien copie'); } catch { alert('Copie impossible'); }
+  els.baseUrl.addEventListener('change', renderInvite);
+  els.copyCodeBtn.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(room); alert('Code copie'); } catch {}
   });
+  els.copyLinkBtn.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(buildJoinUrl()); alert('Lien copie'); } catch {}
+  });
+  els.startRoundBtn.addEventListener('click', () => socket.emit('buzz:open'));
+  els.resetRoundBtn.addEventListener('click', () => socket.emit('round:reset'));
 });
 </script> </body> </html>
