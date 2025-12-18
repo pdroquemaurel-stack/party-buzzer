@@ -47,9 +47,11 @@
       <div class="row">
         <label><input type="radio" name="mode" value="buzzer" checked /> Buzzer</label>
         <label style="margin-left:1rem;"><input type="radio" name="mode" value="quiz" /> Quiz Vrai/Faux</label>
+        <label style="margin-left:1rem;"><input type="radio" name="mode" value="guess" /> Devine le nombre</label>
       </div>
     </section>
 
+    <!-- Buzzer -->
     <section id="buzzerPanel" class="card">
       <h2>Buzzer</h2>
       <div class="row">
@@ -60,6 +62,7 @@
       <div id="status" class="row"></div>
     </section>
 
+    <!-- Quiz -->
     <section id="quizPanel" class="card" style="display:none;">
       <h2>Quiz Vrai/Faux</h2>
 
@@ -91,6 +94,38 @@
       <div id="quizInfo" class="row hint"></div>
     </section>
 
+    <!-- Devine le nombre -->
+    <section id="guessPanel" class="card" style="display:none;">
+      <h2>Devine le nombre</h2>
+      <div class="field">
+        <label>Question</label>
+        <input id="guessQuestion" type="text" placeholder="Ex: Combien font 7 x 8 ?" />
+      </div>
+      <div class="row" style="display:flex; gap:1rem; flex-wrap:wrap;">
+        <div class="field" style="min-width:140px;">
+          <label>Réponse correcte</label>
+          <input id="guessCorrect" type="number" value="56" />
+        </div>
+        <div class="field" style="min-width:140px;">
+          <label>Min</label>
+          <input id="guessMin" type="number" value="0" />
+        </div>
+        <div class="field" style="min-width:140px;">
+          <label>Max</label>
+          <input id="guessMax" type="number" value="100" />
+        </div>
+        <div class="field" style="min-width:140px;">
+          <label>Durée (s)</label>
+          <input id="guessSeconds" type="number" min="1" max="60" value="8" />
+        </div>
+      </div>
+      <div class="row">
+        <button id="guessStartBtn">Poser (3-2-1)</button>
+        <button id="guessCloseBtn">Clore et corriger maintenant</button>
+      </div>
+      <div id="guessInfo" class="row hint"></div>
+    </section>
+
     <section class="card">
       <h2>Joueurs</h2>
       <ul id="players"></ul>
@@ -100,7 +135,6 @@
   </main>
 
   <!-- Overlays -->
-  <!-- Gagnant (buzzer) -->
   <div id="overlay" class="overlay" onclick="this.classList.remove('show')">
     <div>
       <div class="label">Gagnant</div>
@@ -109,7 +143,6 @@
     </div>
   </div>
 
-  <!-- Compte à rebours (buzzer uniquement) -->
   <div id="countdown" class="overlay">
     <div>
       <div class="label">Debut dans</div>
@@ -117,7 +150,7 @@
     </div>
   </div>
 
-  <!-- Overlay Question (quiz) -->
+  <!-- Overlay Question (réutilisé pour Quiz et Guess) -->
   <div id="quizQOverlay" class="overlay">
     <div>
       <div class="label">Question</div>
@@ -134,14 +167,12 @@
       for (let i = 0; i < len; i++) out += chars[Math.floor(Math.random() * chars.length)];
       return out;
     }
-
     function playBeep(freq = 880, durMs = 120) {
       try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
         const o = ctx.createOscillator();
         const g = ctx.createGain();
-        o.type = 'sine';
-        o.frequency.value = freq;
+        o.type = 'sine'; o.frequency.value = freq;
         o.connect(g); g.connect(ctx.destination);
         g.gain.setValueAtTime(0.001, ctx.currentTime);
         g.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.02);
@@ -163,7 +194,6 @@
       copyLinkBtn: document.getElementById('copyLinkBtn'),
       players: document.getElementById('players'),
 
-      // Buzzer
       status: document.getElementById('status'),
       startRoundBtn: document.getElementById('startRoundBtn'),
       resetRoundBtn: document.getElementById('resetRoundBtn'),
@@ -173,10 +203,13 @@
       countdown: document.getElementById('countdown'),
       countNum: document.getElementById('countNum'),
 
-      // Mode/Quiz
       modeRadios: document.getElementsByName('mode'),
       buzzerPanel: document.getElementById('buzzerPanel'),
       quizPanel: document.getElementById('quizPanel'),
+      // banque quiz
+      quizLoadBtn: document.getElementById('quizLoadBtn'),
+      quizRandomBtn: document.getElementById('quizRandomBtn'),
+      quizLoadedInfo: document.getElementById('quizLoadedInfo'),
       quizQuestion: document.getElementById('quizQuestion'),
       quizTrue: document.getElementById('quizTrue'),
       quizFalse: document.getElementById('quizFalse'),
@@ -185,12 +218,18 @@
       quizCloseBtn: document.getElementById('quizCloseBtn'),
       quizInfo: document.getElementById('quizInfo'),
 
-      // Banque
-      quizLoadBtn: document.getElementById('quizLoadBtn'),
-      quizRandomBtn: document.getElementById('quizRandomBtn'),
-      quizLoadedInfo: document.getElementById('quizLoadedInfo'),
+      // Guess
+      guessPanel: document.getElementById('guessPanel'),
+      guessQuestion: document.getElementById('guessQuestion'),
+      guessCorrect: document.getElementById('guessCorrect'),
+      guessMin: document.getElementById('guessMin'),
+      guessMax: document.getElementById('guessMax'),
+      guessSeconds: document.getElementById('guessSeconds'),
+      guessStartBtn: document.getElementById('guessStartBtn'),
+      guessCloseBtn: document.getElementById('guessCloseBtn'),
+      guessInfo: document.getElementById('guessInfo'),
 
-      // Overlay Quiz
+      // Overlay question (quiz/guess)
       quizQOverlay: document.getElementById('quizQOverlay'),
       quizQText: document.getElementById('quizQText'),
       quizTimer: document.getElementById('quizTimer')
@@ -200,17 +239,16 @@
     let room = generateRoomCode(5);
 
     // Timers
-    let cdTimer = null;     // pour overlay buzzer
-    let quizTimer = null;   // pour timer quiz sur TV
+    let cdTimer = null;
+    let quizTimer = null; // utilisé pour quiz et guess
 
-    // Banque
+    // Banque quiz
     let questionBank = [];
 
     function buildJoinUrl() {
       const base = els.baseUrl.value.trim().replace(/\/+$/, '');
       return base + '/join?room=' + encodeURIComponent(room);
     }
-
     function renderInvite() {
       els.roomCode.textContent = room;
       const joinUrl = buildJoinUrl();
@@ -219,7 +257,6 @@
       const qrApi = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=';
       els.qr.src = joinUrl ? (qrApi + encodeURIComponent(joinUrl)) : '';
     }
-
     function renderPlayers(list) {
       els.players.innerHTML = '';
       (list || []).forEach(p => {
@@ -228,14 +265,12 @@
         els.players.appendChild(li);
       });
     }
-
     function setStatus(text) { els.status.textContent = text || ''; }
 
     function stopCountdownUI() {
       if (cdTimer) { clearInterval(cdTimer); cdTimer = null; }
       els.countdown.classList.remove('show');
     }
-
     function startCountdown(sec = 3, onEnd) {
       stopCountdownUI();
       els.countNum.textContent = sec;
@@ -245,26 +280,12 @@
       let remain = sec;
       cdTimer = setInterval(() => {
         remain--;
-        if (remain > 0) {
-          els.countNum.textContent = remain;
-          playBeep(700, 120);
-        } else {
-          stopCountdownUI();
-          playBeep(1200, 200);
-          if (typeof onEnd === 'function') onEnd();
-        }
+        if (remain > 0) { els.countNum.textContent = remain; playBeep(700, 120); }
+        else { stopCountdownUI(); playBeep(1200, 200); if (typeof onEnd === 'function') onEnd(); }
       }, 1000);
     }
 
-    function setModeUI(mode) {
-      const isQuiz = mode === 'quiz';
-      els.quizPanel.style.display = isQuiz ? '' : 'none';
-      els.buzzerPanel.style.display = isQuiz ? 'none' : '';
-      for (const r of els.modeRadios) r.checked = (r.value === mode);
-    }
-
-    function showQuizOverlay(question, seconds) {
-      // Affiche la question et un timer visible
+    function showQuestionOverlay(question, seconds) {
       if (quizTimer) { clearInterval(quizTimer); quizTimer = null; }
       els.quizQText.textContent = question;
       let remain = seconds || 5;
@@ -272,118 +293,106 @@
       els.quizQOverlay.classList.add('show');
       quizTimer = setInterval(() => {
         remain--;
-        if (remain > 0) {
-          els.quizTimer.textContent = `Temps restant: ${remain}s`;
-        } else {
-          clearInterval(quizTimer); quizTimer = null;
-        }
+        if (remain > 0) els.quizTimer.textContent = `Temps restant: ${remain}s`;
+        else { clearInterval(quizTimer); quizTimer = null; }
       }, 1000);
     }
-
-    function hideQuizOverlay() {
+    function hideQuestionOverlay() {
       if (quizTimer) { clearInterval(quizTimer); quizTimer = null; }
       els.quizQOverlay.classList.remove('show');
       els.quizTimer.textContent = '';
     }
 
+    function setModeUI(mode) {
+      els.buzzerPanel.style.display = (mode === 'buzzer') ? '' : 'none';
+      els.quizPanel.style.display = (mode === 'quiz') ? '' : 'none';
+      els.guessPanel.style.display = (mode === 'guess') ? '' : 'none';
+      for (const r of els.modeRadios) r.checked = (r.value === mode);
+    }
+
     window.addEventListener('DOMContentLoaded', function () {
       els.baseUrl.value = window.location.origin;
       renderInvite();
-
       socket.emit('tv:create_room', room);
 
       // Radios mode -> serveur
-      for (const r of els.modeRadios) {
-        r.addEventListener('change', () => {
-          if (r.checked) socket.emit('mode:set', { mode: r.value });
-        });
-      }
+      for (const r of els.modeRadios) r.addEventListener('change', () => { if (r.checked) socket.emit('mode:set', { mode: r.value }); });
 
-      // Events Socket.IO communs
+      // Commun
       socket.on('mode:changed', ({ mode }) => {
         setModeUI(mode);
         els.overlay.classList.remove('show');
         stopCountdownUI();
-        hideQuizOverlay();
+        hideQuestionOverlay();
         els.quizInfo.textContent = '';
-        setStatus(mode === 'quiz' ? 'Mode Quiz' : 'Mode Buzzer');
+        els.guessInfo.textContent = '';
+        setStatus(mode === 'buzzer' ? 'Mode Buzzer' : mode === 'quiz' ? 'Mode Quiz' : 'Mode Devine');
       });
       socket.on('room:players', renderPlayers);
       socket.on('scores:reset', () => setStatus('Scores reinitialises'));
+      socket.on('round:reset', () => { els.overlay.classList.remove('show'); stopCountdownUI(); hideQuestionOverlay(); setStatus('Tour/Question reinitialise.'); });
 
       // Buzzer
-      socket.on('round:open', () => {
-        els.overlay.classList.remove('show');
-        setStatus('Tour ouvert: le plus rapide gagne !');
-      });
-      socket.on('round:winner', (data) => {
-        setStatus(`Gagnant: ${data.name} (+1)`);
-        els.winnerName.textContent = data.name;
-        els.overlay.classList.add('show');
-        playBeep(1200, 200);
-      });
-      socket.on('round:reset', () => {
-        els.overlay.classList.remove('show');
-        stopCountdownUI();
-        hideQuizOverlay();
-        setStatus('Tour/Question reinitialise.');
-      });
+      socket.on('round:open', () => { els.overlay.classList.remove('show'); setStatus('Tour ouvert: le plus rapide gagne !'); });
+      socket.on('round:winner', (data) => { setStatus(`Gagnant: ${data.name} (+1)`); els.winnerName.textContent = data.name; els.overlay.classList.add('show'); playBeep(1200, 200); });
 
       // Quiz
       socket.on('quiz:question', ({ question, seconds }) => {
-        // Affiche la question en grand le temps de la manche
         setModeUI('quiz');
         els.quizInfo.textContent = `Question en cours (${seconds}s): "${question}"`;
-        showQuizOverlay(question, seconds);
+        showQuestionOverlay(question, seconds);
       });
       socket.on('quiz:result', ({ correct, countTrue, countFalse, total }) => {
-        hideQuizOverlay();
+        hideQuestionOverlay();
         const correctText = correct ? 'Vrai' : 'Faux';
         els.quizInfo.textContent = `Bonne reponse: ${correctText} — Vrai: ${countTrue}, Faux: ${countFalse}, Total: ${total}`;
       });
 
-      // UI Salle/Invitations
-      els.regenBtn.addEventListener('click', () => {
-        room = generateRoomCode(5);
-        renderInvite();
-        socket.emit('tv:create_room', room);
+      // Guess
+      socket.on('guess:start', ({ question, min, max, seconds }) => {
+        setModeUI('guess');
+        els.guessInfo.textContent = `Question en cours (${seconds}s) — Intervalle: ${min} à ${max}`;
+        showQuestionOverlay(question, seconds);
       });
+      socket.on('guess:result', ({ correct, winners, bestDiff }) => {
+        hideQuestionOverlay();
+        // Rendre la liste des gagnants lisible
+        const maxShow = 5;
+        const names = winners || [];
+        const shown = names.slice(0, maxShow).join(', ');
+        const more = names.length > maxShow ? ` (+${names.length - maxShow})` : '';
+        const who = names.length ? shown + more : 'Aucun';
+        const diffTxt = (bestDiff === null) ? '' : ` (écart: ${bestDiff})`;
+        els.guessInfo.textContent = `Réponse: ${correct} — Gagnants: ${who}${diffTxt}`;
+      });
+
+      // UI Salle
+      els.regenBtn.addEventListener('click', () => { room = generateRoomCode(5); renderInvite(); socket.emit('tv:create_room', room); });
       els.baseUrl.addEventListener('change', renderInvite);
-      els.copyCodeBtn.addEventListener('click', async () => {
-        try { await navigator.clipboard.writeText(room); alert('Code copie'); } catch {}
-      });
-      els.copyLinkBtn.addEventListener('click', async () => {
-        try { await navigator.clipboard.writeText(buildJoinUrl()); alert('Lien copie'); } catch {}
-      });
+      els.copyCodeBtn.addEventListener('click', async () => { try { await navigator.clipboard.writeText(room); alert('Code copie'); } catch {} });
+      els.copyLinkBtn.addEventListener('click', async () => { try { await navigator.clipboard.writeText(buildJoinUrl()); alert('Lien copie'); } catch {} });
 
       // Buzzer actions
       els.startRoundBtn.addEventListener('click', () => startCountdown(3, () => socket.emit('buzz:open')));
       els.resetRoundBtn.addEventListener('click', () => socket.emit('round:reset'));
       els.resetScoresBtn.addEventListener('click', () => socket.emit('scores:reset'));
 
-      // Banque de questions
-      els.quizLoadBtn.addEventListener('click', async () => {
+      // Banque quiz
+      els.quizLoadBtn?.addEventListener('click', async () => {
         try {
           const res = await fetch('/questions.json', { cache: 'no-store' });
           const data = await res.json();
-          if (!Array.isArray(data)) throw new Error('Format invalide (attendu: tableau)');
+          if (!Array.isArray(data)) throw new Error('Format invalide');
           questionBank = data;
           els.quizLoadedInfo.textContent = `${questionBank.length} question(s) chargée(s).`;
           els.quizRandomBtn.disabled = questionBank.length === 0;
-        } catch (e) {
-          alert('Impossible de charger /questions.json');
-          questionBank = [];
-          els.quizLoadedInfo.textContent = '';
-          els.quizRandomBtn.disabled = true;
-        }
+        } catch { alert('Impossible de charger /questions.json'); questionBank = []; els.quizLoadedInfo.textContent=''; els.quizRandomBtn.disabled = true; }
       });
-
-      els.quizRandomBtn.addEventListener('click', () => {
+      els.quizRandomBtn?.addEventListener('click', () => {
         if (!questionBank.length) return;
-        const idx = Math.floor(Math.random() * questionBank.length);
-        const item = questionBank[idx];
+        const item = questionBank[Math.floor(Math.random() * questionBank.length)];
         els.quizQuestion.value = item.q || '';
-        if (item.a) { els.quizTrue.checked = true; } else { els.quizFalse.checked = true; }
+        if (item.a) els.quizTrue.checked = true; else els.quizFalse.checked = true;
       });
 
       // Quiz actions
@@ -392,18 +401,25 @@
         const correct = els.quizTrue.checked;
         const seconds = Math.max(1, Math.min(30, parseInt(els.quizSeconds.value || '5', 10)));
         if (!q) { alert('Entre une question'); return; }
-
-        // Démarre officiellement la question
         socket.emit('quiz:start', { question: q, correct, seconds });
-
-        // Lance le chrono pour tous (mobiles) et affiche le timer sur l’overlay Question (via quiz:question + countdown côté clients)
         socket.emit('countdown:start', seconds);
-
-        // Clôture automatique à la fin
         setTimeout(() => socket.emit('quiz:close'), seconds * 1000);
       });
-
       els.quizCloseBtn.addEventListener('click', () => socket.emit('quiz:close'));
+
+      // Guess actions
+      els.guessStartBtn.addEventListener('click', () => {
+        const q = els.guessQuestion.value.trim();
+        if (!q) { alert('Entre une question'); return; }
+        const correct = parseInt(els.guessCorrect.value || '0', 10);
+        const min = parseInt(els.guessMin.value || '0', 10);
+        const max = parseInt(els.guessMax.value || '100', 10);
+        const seconds = Math.max(1, Math.min(60, parseInt(els.guessSeconds.value || '8', 10)));
+        socket.emit('guess:start', { question: q, correct, min, max, seconds });
+        socket.emit('countdown:start', seconds);
+        setTimeout(() => socket.emit('guess:close'), seconds * 1000);
+      });
+      els.guessCloseBtn.addEventListener('click', () => socket.emit('guess:close'));
     });
   </script>
 </body>
