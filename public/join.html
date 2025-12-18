@@ -71,16 +71,14 @@
     if (roomParam) elRoom.value = roomParam;
 
     let socket = null;
-    let currentRoom = null;
     let currentMode = 'buzzer';
-    let quizAnswered = null; // true/false/null
+    let quizAnswered = null;
     let cdInt = null;
 
     function setBuzzEnabled(on) {
       elBuzz.disabled = !on;
       elBuzz.style.opacity = on ? '1' : '0.6';
     }
-
     function setQuizEnabled(on) {
       elBtnTrue.disabled = !on;
       elBtnFalse.disabled = !on;
@@ -88,20 +86,11 @@
       elBtnTrue.style.opacity = op;
       elBtnFalse.style.opacity = op;
     }
-
-    function stopCountdown() {
-      if (cdInt) { clearInterval(cdInt); cdInt = null; }
-    }
-
+    function stopCountdown() { if (cdInt) { clearInterval(cdInt); cdInt = null; } }
     function setModeUI(mode) {
       currentMode = mode;
-      if (mode === 'quiz') {
-        elQuizPanel.style.display = '';
-        elJoined.style.display = 'none';
-      } else {
-        elQuizPanel.style.display = 'none';
-        elJoined.style.display = '';
-      }
+      if (mode === 'quiz') { elQuizPanel.style.display = ''; elJoined.style.display = 'none'; }
+      else { elQuizPanel.style.display = 'none'; elJoined.style.display = ''; }
     }
 
     elJoinBtn.addEventListener('click', () => {
@@ -112,12 +101,9 @@
       socket = io();
       socket.emit('player:join', { room, name: pseudo }, (res) => {
         if (!res || !res.ok) { alert('Impossible de rejoindre'); return; }
-        currentRoom = room;
         elJoinedRoom.textContent = room;
         elJoinedPseudo.textContent = res.name;
         elForm.style.display = 'none';
-
-        // Par défaut, on affiche Buzzer panel; mode:changed ajustera
         elJoined.style.display = '';
         setBuzzEnabled(false);
         elRoundState.textContent = 'En attente du debut de tour...';
@@ -131,12 +117,13 @@
           setBuzzEnabled(false);
           elRoundState.textContent = 'Mode Buzzer — en attente du tour...';
         } else {
+          // En mode quiz, on attend la question puis on activera les boutons
           setQuizEnabled(false);
           elQuizInfo.textContent = 'Mode Quiz — en attente de la question...';
         }
       });
 
-      // Compte à rebours générique (affiché en texte ici)
+      // Compte à rebours
       socket.on('countdown:start', ({ seconds }) => {
         stopCountdown();
         let remain = seconds || 3;
@@ -144,14 +131,14 @@
           setBuzzEnabled(false);
           elRoundState.textContent = 'Debut dans ' + remain + '...';
         } else {
-          setQuizEnabled(false);
-          elQuizInfo.textContent = 'Debut dans ' + remain + '...';
+          // En quiz: on laisse les boutons actifs si la question est posée
+          elQuizInfo.textContent = 'Temps restant: ' + remain + 's';
         }
         cdInt = setInterval(() => {
           remain--;
           if (remain > 0) {
             if (currentMode === 'buzzer') elRoundState.textContent = 'Debut dans ' + remain + '...';
-            else elQuizInfo.textContent = 'Debut dans ' + remain + '...';
+            else elQuizInfo.textContent = 'Temps restant: ' + remain + 's';
           } else {
             stopCountdown();
           }
@@ -185,7 +172,7 @@
       socket.on('quiz:question', ({ question, seconds }) => {
         quizAnswered = null;
         elQuizQ.textContent = question;
-        setQuizEnabled(true);
+        setQuizEnabled(true); // on peut répondre pendant le chrono
         elQuizInfo.textContent = `Reponds maintenant (${seconds}s)`;
       });
       socket.on('quiz:result', ({ correct, countTrue, countFalse, total }) => {
@@ -202,7 +189,6 @@
       setBuzzEnabled(false);
       socket.emit('buzz:press', () => {});
     });
-
     elBtnTrue.addEventListener('click', () => {
       if (!socket) return;
       setQuizEnabled(false);

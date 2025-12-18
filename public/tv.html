@@ -141,8 +141,6 @@
       copyCodeBtn: document.getElementById('copyCodeBtn'),
       copyLinkBtn: document.getElementById('copyLinkBtn'),
       players: document.getElementById('players'),
-
-      // Buzzer
       status: document.getElementById('status'),
       startRoundBtn: document.getElementById('startRoundBtn'),
       resetRoundBtn: document.getElementById('resetRoundBtn'),
@@ -151,8 +149,6 @@
       winnerName: document.getElementById('winnerName'),
       countdown: document.getElementById('countdown'),
       countNum: document.getElementById('countNum'),
-
-      // Mode/Quiz
       modeRadios: document.getElementsByName('mode'),
       buzzerPanel: document.getElementById('buzzerPanel'),
       quizPanel: document.getElementById('quizPanel'),
@@ -233,7 +229,7 @@
 
       socket.emit('tv:create_room', room);
 
-      // Mode radio -> serveur
+      // Radios mode -> serveur (changement manuel de mode)
       for (const r of els.modeRadios) {
         r.addEventListener('change', () => {
           if (r.checked) socket.emit('mode:set', { mode: r.value });
@@ -244,12 +240,11 @@
       socket.on('mode:changed', ({ mode }) => {
         setModeUI(mode);
         els.overlay.classList.remove('show');
-        stopCountdownUI();
+        // Ne PAS stop le countdown ici (sinon ça coupe le 3-2-1 du quiz)
         els.quizInfo.textContent = '';
         setStatus(mode === 'quiz' ? 'Mode Quiz' : 'Mode Buzzer');
       });
 
-      socket.on('room:ready', () => { /* noop */ });
       socket.on('room:players', renderPlayers);
 
       // Buzzer
@@ -280,9 +275,7 @@
         const correctText = correct ? 'Vrai' : 'Faux';
         els.quizInfo.textContent = `Bonne reponse: ${correctText} — Vrai: ${countTrue}, Faux: ${countFalse}, Total: ${total}`;
       });
-      socket.on('countdown:start', ({ seconds }) => {
-        // La TV pilote déjà localement; on ignore ce rebroadcast côté TV
-      });
+      socket.on('countdown:start', ({ seconds }) => { /* la TV pilote déjà localement */ });
 
       // UI actions
       els.regenBtn.addEventListener('click', () => {
@@ -309,11 +302,10 @@
         const correct = els.quizTrue.checked;
         const seconds = Math.max(1, Math.min(30, parseInt(els.quizSeconds.value || '5', 10)));
         if (!q) { alert('Entre une question'); return; }
-        socket.emit('mode:set', { mode: 'quiz' });
+        // Important: ne pas émettre mode:set ici (quiz:start règle le mode côté serveur)
         socket.emit('quiz:start', { question: q, correct, seconds });
         startCountdown(seconds, () => socket.emit('quiz:close'));
       });
-
       els.quizCloseBtn.addEventListener('click', () => socket.emit('quiz:close'));
     });
   </script>
