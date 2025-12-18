@@ -1,1 +1,14 @@
-{ "name": "party-buzzer", "version": "0.2.0", "private": true, "scripts": { "start": "node server.js" }, "engines": { "node": ">=18" }, "dependencies": { "socket.io": "^4.7.5" } }
+{
+  "name": "party-buzzer",
+  "version": "0.2.0",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "socket.io": "^4.7.5"
+  }
+}
