@@ -97,6 +97,16 @@
     <!-- Devine le nombre -->
     <section id="guessPanel" class="card" style="display:none;">
       <h2>Devine le nombre</h2>
+
+      <div class="card" style="background:#fafafa;">
+        <h3 style="margin-top:0;">Banque (facultatif)</h3>
+        <div class="row" style="display:flex; gap:.5rem; flex-wrap:wrap;">
+          <button id="guessLoadBtn">Charger la banque</button>
+          <button id="guessRandomBtn" disabled>Question aléatoire</button>
+          <span id="guessLoadedInfo" class="hint"></span>
+        </div>
+      </div>
+
       <div class="field">
         <label>Question</label>
         <input id="guessQuestion" type="text" placeholder="Ex: Combien font 7 x 8 ?" />
@@ -124,6 +134,12 @@
         <button id="guessCloseBtn">Clore et corriger maintenant</button>
       </div>
       <div id="guessInfo" class="row hint"></div>
+
+      <div class="field">
+        <label>Répartition des réponses</label>
+        <div id="guessChart" class="chart"></div>
+        <div id="guessScale" class="chart-scale"><span>Min</span><span>Max</span></div>
+      </div>
     </section>
 
     <section class="card">
@@ -150,7 +166,6 @@
     </div>
   </div>
 
-  <!-- Overlay Question (réutilisé pour Quiz et Guess) -->
   <div id="quizQOverlay" class="overlay">
     <div>
       <div class="label">Question</div>
@@ -205,8 +220,9 @@
 
       modeRadios: document.getElementsByName('mode'),
       buzzerPanel: document.getElementById('buzzerPanel'),
+
+      // Quiz
       quizPanel: document.getElementById('quizPanel'),
-      // banque quiz
       quizLoadBtn: document.getElementById('quizLoadBtn'),
       quizRandomBtn: document.getElementById('quizRandomBtn'),
       quizLoadedInfo: document.getElementById('quizLoadedInfo'),
@@ -220,6 +236,9 @@
 
       // Guess
       guessPanel: document.getElementById('guessPanel'),
+      guessLoadBtn: document.getElementById('guessLoadBtn'),
+      guessRandomBtn: document.getElementById('guessRandomBtn'),
+      guessLoadedInfo: document.getElementById('guessLoadedInfo'),
       guessQuestion: document.getElementById('guessQuestion'),
       guessCorrect: document.getElementById('guessCorrect'),
       guessMin: document.getElementById('guessMin'),
@@ -228,8 +247,10 @@
       guessStartBtn: document.getElementById('guessStartBtn'),
       guessCloseBtn: document.getElementById('guessCloseBtn'),
       guessInfo: document.getElementById('guessInfo'),
+      guessChart: document.getElementById('guessChart'),
+      guessScale: document.getElementById('guessScale'),
 
-      // Overlay question (quiz/guess)
+      // Overlay question
       quizQOverlay: document.getElementById('quizQOverlay'),
       quizQText: document.getElementById('quizQText'),
       quizTimer: document.getElementById('quizTimer')
@@ -240,10 +261,11 @@
 
     // Timers
     let cdTimer = null;
-    let quizTimer = null; // utilisé pour quiz et guess
+    let quizTimer = null;
 
-    // Banque quiz
-    let questionBank = [];
+    // Banques
+    let questionBankQuiz = [];
+    let questionBankGuess = [];
 
     function buildJoinUrl() {
       const base = els.baseUrl.value.trim().replace(/\/+$/, '');
@@ -310,6 +332,26 @@
       for (const r of els.modeRadios) r.checked = (r.value === mode);
     }
 
+    function renderGuessChart(prog) {
+      // prog: { bins:[{from,to,count}], total, min, max }
+      els.guessChart.innerHTML = '';
+      if (!prog || !Array.isArray(prog.bins) || prog.bins.length === 0) return;
+      const maxCount = Math.max(1, ...prog.bins.map(b => b.count));
+      prog.bins.forEach(b => {
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        const h = Math.round((b.count / maxCount) * 100);
+        bar.style.height = (h || 2) + '%';
+        bar.title = `${b.from}–${b.to}: ${b.count}`;
+        const label = document.createElement('div');
+        label.className = 'bar-label';
+        label.textContent = b.count ? b.count : '';
+        bar.appendChild(label);
+        els.guessChart.appendChild(bar);
+      });
+      els.guessScale.innerHTML = `<span>${prog.min}</span><span>${prog.max}</span>`;
+    }
+
     window.addEventListener('DOMContentLoaded', function () {
       els.baseUrl.value = window.location.origin;
       renderInvite();
@@ -326,6 +368,7 @@
         hideQuestionOverlay();
         els.quizInfo.textContent = '';
         els.guessInfo.textContent = '';
+        els.guessChart.innerHTML = '';
         setStatus(mode === 'buzzer' ? 'Mode Buzzer' : mode === 'quiz' ? 'Mode Quiz' : 'Mode Devine');
       });
       socket.on('room:players', renderPlayers);
@@ -337,36 +380,32 @@
       socket.on('round:winner', (data) => { setStatus(`Gagnant: ${data.name} (+1)`); els.winnerName.textContent = data.name; els.overlay.classList.add('show'); playBeep(1200, 200); });
 
       // Quiz
-      socket.on('quiz:question', ({ question, seconds }) => {
-        setModeUI('quiz');
-        els.quizInfo.textContent = `Question en cours (${seconds}s): "${question}"`;
-        showQuestionOverlay(question, seconds);
-      });
-      socket.on('quiz:result', ({ correct, countTrue, countFalse, total }) => {
-        hideQuestionOverlay();
-        const correctText = correct ? 'Vrai' : 'Faux';
-        els.quizInfo.textContent = `Bonne reponse: ${correctText} — Vrai: ${countTrue}, Faux: ${countFalse}, Total: ${total}`;
-      });
+      socket.on('quiz:question', ({ question, seconds }) => { setModeUI('quiz'); els.quizInfo.textContent = `Question en cours (${seconds}s): "${question}"`; showQuestionOverlay(question, seconds); });
+      socket.on('quiz:result', ({ correct, countTrue, countFalse, total }) => { hideQuestionOverlay(); const txt = correct ? 'Vrai' : 'Faux'; els.quizInfo.textContent = `Bonne reponse: ${txt} — Vrai: ${countTrue}, Faux: ${countFalse}, Total: ${total}`; });
 
       // Guess
       socket.on('guess:start', ({ question, min, max, seconds }) => {
         setModeUI('guess');
         els.guessInfo.textContent = `Question en cours (${seconds}s) — Intervalle: ${min} à ${max}`;
         showQuestionOverlay(question, seconds);
+        els.guessChart.innerHTML = '';
+        els.guessScale.innerHTML = `<span>${min}</span><span>${max}</span>`;
       });
-      socket.on('guess:result', ({ correct, winners, bestDiff }) => {
+      socket.on('guess:progress', (prog) => {
+        renderGuessChart(prog);
+      });
+      socket.on('guess:result', ({ correct, winners, bestDiff, tol }) => {
         hideQuestionOverlay();
-        // Rendre la liste des gagnants lisible
         const maxShow = 5;
         const names = winners || [];
         const shown = names.slice(0, maxShow).join(', ');
         const more = names.length > maxShow ? ` (+${names.length - maxShow})` : '';
         const who = names.length ? shown + more : 'Aucun';
-        const diffTxt = (bestDiff === null) ? '' : ` (écart: ${bestDiff})`;
-        els.guessInfo.textContent = `Réponse: ${correct} — Gagnants: ${who}${diffTxt}`;
+        const detail = (bestDiff === null) ? '' : ` — meilleur écart: ${bestDiff}${tol ? `, tolérance≈±${tol}` : ''}`;
+        els.guessInfo.textContent = `Réponse: ${correct} — Gagnants: ${who}${detail}`;
       });
 
-      // UI Salle
+      // Salle
       els.regenBtn.addEventListener('click', () => { room = generateRoomCode(5); renderInvite(); socket.emit('tv:create_room', room); });
       els.baseUrl.addEventListener('change', renderInvite);
       els.copyCodeBtn.addEventListener('click', async () => { try { await navigator.clipboard.writeText(room); alert('Code copie'); } catch {} });
@@ -383,14 +422,14 @@
           const res = await fetch('/questions.json', { cache: 'no-store' });
           const data = await res.json();
           if (!Array.isArray(data)) throw new Error('Format invalide');
-          questionBank = data;
-          els.quizLoadedInfo.textContent = `${questionBank.length} question(s) chargée(s).`;
-          els.quizRandomBtn.disabled = questionBank.length === 0;
-        } catch { alert('Impossible de charger /questions.json'); questionBank = []; els.quizLoadedInfo.textContent=''; els.quizRandomBtn.disabled = true; }
+          questionBankQuiz = data;
+          els.quizLoadedInfo.textContent = `${questionBankQuiz.length} question(s) chargée(s).`;
+          els.quizRandomBtn.disabled = questionBankQuiz.length === 0;
+        } catch { alert('Impossible de charger /questions.json'); questionBankQuiz = []; els.quizLoadedInfo.textContent=''; els.quizRandomBtn.disabled = true; }
       });
       els.quizRandomBtn?.addEventListener('click', () => {
-        if (!questionBank.length) return;
-        const item = questionBank[Math.floor(Math.random() * questionBank.length)];
+        if (!questionBankQuiz.length) return;
+        const item = questionBankQuiz[Math.floor(Math.random() * questionBankQuiz.length)];
         els.quizQuestion.value = item.q || '';
         if (item.a) els.quizTrue.checked = true; else els.quizFalse.checked = true;
       });
@@ -406,6 +445,27 @@
         setTimeout(() => socket.emit('quiz:close'), seconds * 1000);
       });
       els.quizCloseBtn.addEventListener('click', () => socket.emit('quiz:close'));
+
+      // Banque guess
+      els.guessLoadBtn.addEventListener('click', async () => {
+        try {
+          const res = await fetch('/guess-questions.json', { cache: 'no-store' });
+          const data = await res.json();
+          if (!Array.isArray(data)) throw new Error('Format invalide');
+          questionBankGuess = data;
+          els.guessLoadedInfo.textContent = `${questionBankGuess.length} question(s) chargée(s).`;
+          els.guessRandomBtn.disabled = questionBankGuess.length === 0;
+        } catch { alert('Impossible de charger /guess-questions.json'); questionBankGuess = []; els.guessLoadedInfo.textContent=''; els.guessRandomBtn.disabled = true; }
+      });
+      els.guessRandomBtn.addEventListener('click', () => {
+        if (!questionBankGuess.length) return;
+        const item = questionBankGuess[Math.floor(Math.random() * questionBankGuess.length)];
+        els.guessQuestion.value = item.q || '';
+        els.guessCorrect.value = item.c ?? '';
+        els.guessMin.value = item.min ?? 0;
+        els.guessMax.value = item.max ?? 100;
+        els.guessSeconds.value = item.s ?? 8;
+      });
 
       // Guess actions
       els.guessStartBtn.addEventListener('click', () => {
