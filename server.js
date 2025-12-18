@@ -6,7 +6,7 @@ const { Server } = require('socket.io');
 
 // Jeux (modules)
 const buzzerGame = require('./server/games/buzzer');
-const quizGame = require('./server/games/quiz');
+const quizGame = require('./server/games/quizz');
 
 const games = {
   buzzer: buzzerGame,
