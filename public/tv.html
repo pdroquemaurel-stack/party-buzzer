@@ -1,128 +1,193 @@
-<!doctype html> <html lang="fr"> <head> <meta charset="utf-8" /> <title>Party Buzzer - TV/Admin</title> <meta name="viewport" content="width=device-width, initial-scale=1" /> <link rel="stylesheet" href="/style.css" /> </head> <body> <main class="container"> <h1>Ecran TV / Administration</h1>
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <title>Party Buzzer - TV/Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>Ecran TV / Administration</h1>
 
-<section class="card">
-  <h2>Salle</h2>
-  <div class="row">
+    <section class="card">
+      <h2>Salle</h2>
+      <div class="row">
+        <div>
+          <label>Code de salle:</label>
+          <span id="roomCode" class="code"></span>
+          <button id="regenBtn">Regenerer</button>
+          <button id="copyCodeBtn">Copier le code</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>Base URL (pour generer le lien/QR):</label>
+          <input id="baseUrl" type="text" />
+          <small class="hint">Utilise l'URL Render (https://...onrender.com)</small>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>Lien d'invitation:</label>
+          <a id="joinLink" href="#" target="_blank" rel="noopener"></a>
+          <button id="copyLinkBtn">Copier le lien</button>
+        </div>
+      </div>
+
+      <div class="row qr">
+        <img id="qr" alt="QR code vers /join" width="220" height="220" />
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Partie</h2>
+      <div class="row">
+        <button id="startRoundBtn">Demarrer le tour</button>
+        <button id="resetRoundBtn">Reinitialiser le tour</button>
+        <button id="resetScoresBtn">Reinitialiser les scores</button>
+      </div>
+      <div id="status" class="row"></div>
+    </section>
+
+    <section class="card">
+      <h2>Joueurs</h2>
+      <ul id="players"></ul>
+    </section>
+
+    <p><a href="/">Retour a l'accueil</a></p>
+  </main>
+
+  <!-- Overlay gagnant -->
+  <div id="overlay" class="overlay" onclick="this.classList.remove('show')">
     <div>
-      <label>Code de salle:</label>
-      <span id="roomCode" class="code"></span>
-      <button id="regenBtn">Regenerer</button>
-      <button id="copyCodeBtn">Copier le code</button>
+      <div class="label">Gagnant</div>
+      <div id="winnerName" class="winner"></div>
+      <div class="hint">(cliquer pour fermer)</div>
     </div>
   </div>
 
-  <div class="row">
-    <div class="field">
-      <label>Base URL (pour generer le lien/QR):</label>
-      <input id="baseUrl" type="text" />
-      <small class="hint">Utilise l'URL Render (https://...onrender.com)</small>
-    </div>
-  </div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    function generateRoomCode(len) {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let out = '';
+      for (let i = 0; i < len; i++) out += chars[Math.floor(Math.random() * chars.length)];
+      return out;
+    }
 
-  <div class="row">
-    <div class="field">
-      <label>Lien d'invitation:</label>
-      <a id="joinLink" href="#" target="_blank" rel="noopener"></a>
-      <button id="copyLinkBtn">Copier le lien</button>
-    </div>
-  </div>
+    function playBeep() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = 'sine';
+        o.frequency.value = 880;
+        o.connect(g); g.connect(ctx.destination);
+        g.gain.setValueAtTime(0.001, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.02);
+        o.start();
+        setTimeout(() => {
+          g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.1);
+          o.stop(ctx.currentTime + 0.12);
+        }, 120);
+      } catch {}
+    }
 
-  <div class="row qr">
-    <img id="qr" alt="QR code vers /join" width="220" height="220" />
-  </div>
-</section>
+    const els = {
+      roomCode: document.getElementById('roomCode'),
+      baseUrl: document.getElementById('baseUrl'),
+      joinLink: document.getElementById('joinLink'),
+      qr: document.getElementById('qr'),
+      regenBtn: document.getElementById('regenBtn'),
+      copyCodeBtn: document.getElementById('copyCodeBtn'),
+      copyLinkBtn: document.getElementById('copyLinkBtn'),
+      players: document.getElementById('players'),
+      status: document.getElementById('status'),
+      startRoundBtn: document.getElementById('startRoundBtn'),
+      resetRoundBtn: document.getElementById('resetRoundBtn'),
+      resetScoresBtn: document.getElementById('resetScoresBtn'),
+      overlay: document.getElementById('overlay'),
+      winnerName: document.getElementById('winnerName')
+    };
 
-<section class="card">
-  <h2>Partie</h2>
-  <div class="row">
-    <button id="startRoundBtn">Demarrer le tour</button>
-    <button id="resetRoundBtn">Reinitialiser le tour</button>
-  </div>
-  <div id="status" class="row"></div>
-</section>
+    let room = generateRoomCode(5);
+    const socket = io();
 
-<section class="card">
-  <h2>Joueurs</h2>
-  <ul id="players"></ul>
-</section>
+    function buildJoinUrl() {
+      const base = els.baseUrl.value.trim().replace(/\/+$/, '');
+      return base + '/join?room=' + encodeURIComponent(room);
+    }
 
-<p><a href="/">Retour a l'accueil</a></p>
-</main>
+    function renderInvite() {
+      els.roomCode.textContent = room;
+      const joinUrl = buildJoinUrl();
+      els.joinLink.textContent = joinUrl || '(renseigne la Base URL)';
+      els.joinLink.href = joinUrl || '#';
+      const qrApi = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=';
+      els.qr.src = joinUrl ? (qrApi + encodeURIComponent(joinUrl)) : '';
+    }
 
-<script src="/socket.io/socket.io.js"></script> <script> function generateRoomCode(len) { const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let out = ''; for (let i = 0; i < len; i++) out += chars[Math.floor(Math.random() * chars.length)]; return out; }
+    function renderPlayers(list) {
+      els.players.innerHTML = '';
+      (list || []).forEach(p => {
+        const li = document.createElement('li');
+        li.textContent = `${p.name} — ${p.score} pt${p.score>1?'s':''}${p.connected?' (en ligne)':''}`;
+        els.players.appendChild(li);
+      });
+    }
 
-const els = {
-  roomCode: document.getElementById('roomCode'),
-  baseUrl: document.getElementById('baseUrl'),
-  joinLink: document.getElementById('joinLink'),
-  qr: document.getElementById('qr'),
-  regenBtn: document.getElementById('regenBtn'),
-  copyCodeBtn: document.getElementById('copyCodeBtn'),
-  copyLinkBtn: document.getElementById('copyLinkBtn'),
-  players: document.getElementById('players'),
-  status: document.getElementById('status'),
-  startRoundBtn: document.getElementById('startRoundBtn'),
-  resetRoundBtn: document.getElementById('resetRoundBtn')
-};
+    function setStatus(text) {
+      els.status.textContent = text || '';
+    }
 
-let room = generateRoomCode(5);
-const socket = io();
+    window.addEventListener('DOMContentLoaded', function () {
+      els.baseUrl.value = window.location.origin;
+      renderInvite();
 
-function buildJoinUrl() {
-  const base = els.baseUrl.value.trim().replace(/\/+$/, '');
-  return base + '/join?room=' + encodeURIComponent(room);
-}
+      // Connecter la TV a la salle
+      socket.emit('tv:create_room', room);
 
-function renderInvite() {
-  els.roomCode.textContent = room;
-  const joinUrl = buildJoinUrl();
-  els.joinLink.textContent = joinUrl || '(renseigne la Base URL)';
-  els.joinLink.href = joinUrl || '#';
-  const qrApi = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=';
-  els.qr.src = joinUrl ? (qrApi + encodeURIComponent(joinUrl)) : '';
-}
+      // Events Socket.IO
+      socket.on('room:ready', () => { setStatus('Salle prete.'); });
+      socket.on('room:players', renderPlayers);
+      socket.on('round:open', () => {
+        els.overlay.classList.remove('show');
+        setStatus('Tour ouvert: le plus rapide gagne !');
+      });
+      socket.on('round:winner', (data) => {
+        setStatus(`Gagnant: ${data.name} (+1)`);
+        els.winnerName.textContent = data.name;
+        els.overlay.classList.add('show');
+        playBeep();
+      });
+      socket.on('round:reset', () => {
+        els.overlay.classList.remove('show');
+        setStatus('Tour reinitialise.');
+      });
+      socket.on('scores:reset', () => {
+        setStatus('Scores reinitialises');
+      });
 
-function renderPlayers(list) {
-  els.players.innerHTML = '';
-  (list || []).forEach(p => {
-    const li = document.createElement('li');
-    li.textContent = `${p.name} — ${p.score} pt${p.score>1?'s':''}${p.connected?' (en ligne)':''}`;
-    els.players.appendChild(li);
-  });
-}
-
-function setStatus(text) {
-  els.status.textContent = text || '';
-}
-
-window.addEventListener('DOMContentLoaded', function () {
-  els.baseUrl.value = window.location.origin;
-  renderInvite();
-
-  // Connecter la TV a la salle
-  socket.emit('tv:create_room', room);
-
-  // Events Socket.IO
-  socket.on('room:ready', () => { setStatus('Salle prete.'); });
-  socket.on('room:players', renderPlayers);
-  socket.on('round:open', () => setStatus('Tour ouvert: le plus rapide gagne !'));
-  socket.on('round:winner', (data) => setStatus(`Gagnant: ${data.name} (+1)`));
-  socket.on('round:reset', () => setStatus('Tour reinitialise.'));
-
-  // UI
-  els.regenBtn.addEventListener('click', () => {
-    room = generateRoomCode(5);
-    renderInvite();
-    socket.emit('tv:create_room', room);
-  });
-  els.baseUrl.addEventListener('change', renderInvite);
-  els.copyCodeBtn.addEventListener('click', async () => {
-    try { await navigator.clipboard.writeText(room); alert('Code copie'); } catch {}
-  });
-  els.copyLinkBtn.addEventListener('click', async () => {
-    try { await navigator.clipboard.writeText(buildJoinUrl()); alert('Lien copie'); } catch {}
-  });
-  els.startRoundBtn.addEventListener('click', () => socket.emit('buzz:open'));
-  els.resetRoundBtn.addEventListener('click', () => socket.emit('round:reset'));
-});
-</script> </body> </html>
+      // UI
+      els.regenBtn.addEventListener('click', () => {
+        room = generateRoomCode(5);
+        renderInvite();
+        socket.emit('tv:create_room', room);
+      });
+      els.baseUrl.addEventListener('change', renderInvite);
+      els.copyCodeBtn.addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(room); alert('Code copie'); } catch {}
+      });
+      els.copyLinkBtn.addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(buildJoinUrl()); alert('Lien copie'); } catch {}
+      });
+      els.startRoundBtn.addEventListener('click', () => socket.emit('buzz:open'));
+      els.resetRoundBtn.addEventListener('click', () => socket.emit('round:reset'));
+      els.resetScoresBtn.addEventListener('click', () => socket.emit('scores:reset'));
+    });
+  </script>
+</body>
+</html>
