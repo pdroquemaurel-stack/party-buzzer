@@ -69,6 +69,14 @@
     </div>
   </div>
 
+  <!-- Overlay compte à rebours -->
+  <div id="countdown" class="overlay">
+    <div>
+      <div class="label">Debut dans</div>
+      <div id="countNum" class="winner"></div>
+    </div>
+  </div>
+
   <script src="/socket.io/socket.io.js"></script>
   <script>
     function generateRoomCode(len) {
@@ -78,13 +86,13 @@
       return out;
     }
 
-    function playBeep() {
+    function playBeep(freq = 880, durMs = 120) {
       try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
         const o = ctx.createOscillator();
         const g = ctx.createGain();
         o.type = 'sine';
-        o.frequency.value = 880;
+        o.frequency.value = freq;
         o.connect(g); g.connect(ctx.destination);
         g.gain.setValueAtTime(0.001, ctx.currentTime);
         g.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.02);
@@ -92,7 +100,7 @@
         setTimeout(() => {
           g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.1);
           o.stop(ctx.currentTime + 0.12);
-        }, 120);
+        }, durMs);
       } catch {}
     }
 
@@ -110,11 +118,15 @@
       resetRoundBtn: document.getElementById('resetRoundBtn'),
       resetScoresBtn: document.getElementById('resetScoresBtn'),
       overlay: document.getElementById('overlay'),
-      winnerName: document.getElementById('winnerName')
+      winnerName: document.getElementById('winnerName'),
+      countdown: document.getElementById('countdown'),
+      countNum: document.getElementById('countNum')
     };
 
-    let room = generateRoomCode(5);
     const socket = io();
+    let room = generateRoomCode(5);
+    let cdTimer = null;
+    let cdRemain = 0;
 
     function buildJoinUrl() {
       const base = els.baseUrl.value.trim().replace(/\/+$/, '');
@@ -143,6 +155,31 @@
       els.status.textContent = text || '';
     }
 
+    function stopCountdownUI() {
+      if (cdTimer) { clearInterval(cdTimer); cdTimer = null; }
+      els.countdown.classList.remove('show');
+    }
+
+    function startCountdown(sec = 3) {
+      stopCountdownUI();
+      cdRemain = sec;
+      els.countNum.textContent = cdRemain;
+      els.countdown.classList.add('show');
+      socket.emit('countdown:start', sec); // informer les joueurs
+      playBeep(700, 120);
+      cdTimer = setInterval(() => {
+        cdRemain--;
+        if (cdRemain > 0) {
+          els.countNum.textContent = cdRemain;
+          playBeep(700, 120);
+        } else {
+          stopCountdownUI();
+          playBeep(1200, 200); // GO!
+          socket.emit('buzz:open'); // ouverture officielle du tour
+        }
+      }, 1000);
+    }
+
     window.addEventListener('DOMContentLoaded', function () {
       els.baseUrl.value = window.location.origin;
       renderInvite();
@@ -153,7 +190,11 @@
       // Events Socket.IO
       socket.on('room:ready', () => { setStatus('Salle prete.'); });
       socket.on('room:players', renderPlayers);
+      socket.on('countdown:start', (data) => {
+        // La TV pilote déjà le compte à rebours local; on ignore côté TV
+      });
       socket.on('round:open', () => {
+        stopCountdownUI();
         els.overlay.classList.remove('show');
         setStatus('Tour ouvert: le plus rapide gagne !');
       });
@@ -161,9 +202,10 @@
         setStatus(`Gagnant: ${data.name} (+1)`);
         els.winnerName.textContent = data.name;
         els.overlay.classList.add('show');
-        playBeep();
+        playBeep(1200, 200);
       });
       socket.on('round:reset', () => {
+        stopCountdownUI();
         els.overlay.classList.remove('show');
         setStatus('Tour reinitialise.');
       });
@@ -184,7 +226,7 @@
       els.copyLinkBtn.addEventListener('click', async () => {
         try { await navigator.clipboard.writeText(buildJoinUrl()); alert('Lien copie'); } catch {}
       });
-      els.startRoundBtn.addEventListener('click', () => socket.emit('buzz:open'));
+      els.startRoundBtn.addEventListener('click', () => startCountdown(3));
       els.resetRoundBtn.addEventListener('click', () => socket.emit('round:reset'));
       els.resetScoresBtn.addEventListener('click', () => socket.emit('scores:reset'));
     });

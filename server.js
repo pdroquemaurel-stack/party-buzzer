@@ -30,7 +30,6 @@ function serveStatic(req, res) {
   if (urlPath === '/tv') urlPath = '/tv.html';
   if (urlPath === '/join') urlPath = '/join.html';
 
-  // Normalisation/évitement traversal
   const safePath = path.normalize(urlPath).replace(/^(\.\.[\/\\])+/, '');
   const filePath = path.join(publicDir, safePath);
 
@@ -92,7 +91,7 @@ function broadcastPlayers(code) {
   const r = rooms.get(code);
   if (!r) return;
 
-  // Construire la liste fusionnant présences et scores
+  // Fusion présence/scores
   const listMap = new Map();
   r.scores.forEach((score, name) => listMap.set(name, { name, score, connected: false }));
   r.players.forEach(p => {
@@ -141,9 +140,16 @@ io.on('connection', (socket) => {
     broadcastPlayers(code);
   });
 
+  // Compte à rebours (émis par la TV, diffusé à tous)
+  socket.on('countdown:start', (seconds = 3) => {
+    if (role !== 'tv' || !roomCode) return;
+    const s = Math.max(1, Math.min(10, parseInt(seconds, 10) || 3));
+    io.to(roomCode).emit('countdown:start', { seconds: s });
+  });
+
   // Admin ouvre un tour
   socket.on('buzz:open', () => {
-    if (!roomCode) return;
+    if (role !== 'tv' || !roomCode) return;
     const r = getRoom(roomCode);
     r.buzzOpen = true;
     r.winner = null;
@@ -169,11 +175,22 @@ io.on('connection', (socket) => {
 
   // Admin réinitialise le tour
   socket.on('round:reset', () => {
-    if (!roomCode) return;
+    if (role !== 'tv' || !roomCode) return;
     const r = getRoom(roomCode);
     r.buzzOpen = false;
     r.winner = null;
     io.to(roomCode).emit('round:reset');
+  });
+
+  // Admin réinitialise les scores
+  socket.on('scores:reset', () => {
+    if (role !== 'tv' || !roomCode) return;
+    const r = getRoom(roomCode);
+    const newScores = new Map();
+    r.players.forEach(p => newScores.set(p.name, 0));
+    r.scores = newScores;
+    io.to(roomCode).emit('scores:reset');
+    broadcastPlayers(roomCode);
   });
 
   // Déconnexion
