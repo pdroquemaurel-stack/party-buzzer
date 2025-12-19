@@ -20,6 +20,7 @@
           <button id="copyCodeBtn">Copier le code</button>
         </div>
       </div>
+
       <div class="row">
         <div class="field">
           <label>Base URL (pour generer le lien/QR):</label>
@@ -27,6 +28,7 @@
           <small class="hint">Utilise l'URL Render (https://...onrender.com)</small>
         </div>
       </div>
+
       <div class="row">
         <div class="field">
           <label>Lien d'invitation:</label>
@@ -34,6 +36,7 @@
           <button id="copyLinkBtn">Copier le lien</button>
         </div>
       </div>
+
       <div class="row qr">
         <img id="qr" alt="QR code vers /join" width="220" height="220" />
       </div>
@@ -50,20 +53,20 @@
     </section>
 
     <!-- Buzzer -->
-	<section id="buzzerPanel" class="card">
-	  <h2>Buzzer</h2>
-	  <div class="row">
-		<button id="startRoundBtn" class="btn-green">Demarrer le tour</button>
-		<button id="resetRoundBtn">Reinitialiser le tour</button>
-		<button id="resetScoresBtn">Reinitialiser les scores</button>
-	  </div>
-	  <div id="status" class="row"></div>
-	</section>
-
+    <section id="buzzerPanel" class="card">
+      <h2>Buzzer</h2>
+      <div class="row">
+        <button id="startRoundBtn" class="btn-green">Demarrer le tour</button>
+        <button id="resetRoundBtn">Reinitialiser le tour</button>
+        <button id="resetScoresBtn">Reinitialiser les scores</button>
+      </div>
+      <div id="status" class="row"></div>
+    </section>
 
     <!-- Quiz -->
     <section id="quizPanel" class="card" style="display:none;">
       <h2>Quiz Vrai/Faux</h2>
+
       <div class="card" style="background:#fafafa0f;">
         <h3 style="margin-top:0;">Banque (facultatif)</h3>
         <div class="row" style="display:flex; gap:.5rem; flex-wrap:wrap;">
@@ -72,6 +75,7 @@
           <span id="quizLoadedInfo" class="hint"></span>
         </div>
       </div>
+
       <div class="field">
         <label>Question</label>
         <input id="quizQuestion" type="text" placeholder="Ex: Le Soleil est une étoile ?" />
@@ -85,8 +89,8 @@
         <input id="quizSeconds" type="number" min="1" max="30" value="5" />
       </div>
       <div class="row">
-        <button id="quizStartBtn" class="btn-green">Poser la question</button>
-        <button id="quizCloseBtn">Clore et corriger</button>
+        <button id="quizStartBtn" class="btn-green">Poser la question (3-2-1)</button>
+        <button id="quizCloseBtn">Clore et corriger maintenant</button>
       </div>
       <div id="quizInfo" class="row hint"></div>
     </section>
@@ -94,6 +98,7 @@
     <!-- Guess -->
     <section id="guessPanel" class="card" style="display:none;">
       <h2>Devine le nombre</h2>
+
       <div class="card" style="background:#fafafa0f;">
         <h3 style="margin-top:0;">Banque (facultatif)</h3>
         <div class="row" style="display:flex; gap:.5rem; flex-wrap:wrap;">
@@ -102,6 +107,7 @@
           <span id="guessLoadedInfo" class="hint"></span>
         </div>
       </div>
+
       <div class="row" style="display:flex; gap:1rem; flex-wrap:wrap;">
         <div class="field" style="flex:2; min-width:280px;">
           <label>Question</label>
@@ -125,10 +131,11 @@
         </div>
       </div>
       <div class="row">
-        <button id="guessStartBtn" class="btn-green">Poser</button>
-        <button id="guessCloseBtn">Clore et corriger</button>
+        <button id="guessStartBtn" class="btn-green">Poser (3-2-1)</button>
+        <button id="guessCloseBtn">Clore et corriger maintenant</button>
       </div>
       <div id="guessInfo" class="row hint"></div>
+
       <div class="field">
         <label>Répartition des réponses</label>
         <div id="guessChart" class="chart"></div>
@@ -151,7 +158,7 @@
 
       <div class="row" style="display:flex; gap:1rem; align-items:center; flex-wrap:wrap;">
         <button id="triviaStartBtn" class="btn-green" disabled>Demarrer la serie (20)</button>
-        <button id="triviaReviewNextBtn" disabled>Question suivante (correction)</button>
+        <button id="triviaNextBtn" disabled>Question suivante</button>
         <button id="triviaResetBtn">Reinitialiser</button>
         <span id="triviaStatus" class="hint"></span>
       </div>
@@ -161,9 +168,9 @@
       </div>
 
       <div class="field">
-        <label>Reponses des joueurs (phase correction)</label>
+        <label>Reponses des joueurs</label>
         <div id="triviaAnswers" class="answers-grid"></div>
-        <small class="hint">Clique une tuile pour marquer comme correcte (vert). Puis “Question suivante”.</small>
+        <small class="hint">Clique sur une reponse pour l'accorder (+1), clique encore pour annuler.</small>
       </div>
     </section>
 
@@ -184,6 +191,14 @@
     </div>
   </div>
 
+  <div id="countdown" class="overlay">
+    <div>
+      <div class="label">Debut dans</div>
+      <div id="countNum" class="winner"></div>
+    </div>
+  </div>
+
+  <!-- Overlay Question (quiz/guess/trivia) -->
   <div id="quizQOverlay" class="overlay">
     <div>
       <div class="label">Question</div>
@@ -194,58 +209,75 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    function generateRoomCode(len){ const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let o=''; for(let i=0;i<len;i++) o+=c[Math.floor(Math.random()*c.length)]; return o; }
+    function generateRoomCode(len) {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let out = '';
+      for (let i=0;i<len;i++) out += chars[Math.floor(Math.random()*chars.length)];
+      return out;
+    }
+    function playBeep(freq=880,durMs=120){try{const c=new (window.AudioContext||window.webkitAudioContext)();const o=c.createOscillator();const g=c.createGain();o.type='sine';o.frequency.value=freq;o.connect(g);g.connect(c.destination);g.gain.setValueAtTime(0.001,c.currentTime);g.gain.exponentialRampToValueAtTime(0.3,c.currentTime+0.02);o.start();setTimeout(()=>{g.gain.exponentialRampToValueAtTime(0.0001,c.currentTime+0.1);o.stop(c.currentTime+0.12);},durMs);}catch{}}
 
     const els = {
-      roomCode: document.getElementById('roomCode'), baseUrl: document.getElementById('baseUrl'),
-      joinLink: document.getElementById('joinLink'), qr: document.getElementById('qr'),
-      regenBtn: document.getElementById('regenBtn'), copyCodeBtn: document.getElementById('copyCodeBtn'),
-      copyLinkBtn: document.getElementById('copyLinkBtn'), players: document.getElementById('players'),
+      roomCode: document.getElementById('roomCode'),
+      baseUrl: document.getElementById('baseUrl'),
+      joinLink: document.getElementById('joinLink'),
+      qr: document.getElementById('qr'),
+      regenBtn: document.getElementById('regenBtn'),
+      copyCodeBtn: document.getElementById('copyCodeBtn'),
+      copyLinkBtn: document.getElementById('copyLinkBtn'),
+      players: document.getElementById('players'),
+
       status: document.getElementById('status'),
-      resetRoundBtn: document.getElementById('resetRoundBtn'), resetScoresBtn: document.getElementById('resetScoresBtn'),
-      overlay: document.getElementById('overlay'), winnerName: document.getElementById('winnerName'),
+      startRoundBtn: document.getElementById('startRoundBtn'),
+      resetRoundBtn: document.getElementById('resetRoundBtn'),
+      resetScoresBtn: document.getElementById('resetScoresBtn'),
+      overlay: document.getElementById('overlay'),
+      winnerName: document.getElementById('winnerName'),
+      countdown: document.getElementById('countdown'),
+      countNum: document.getElementById('countNum'),
 
       modeRadios: document.getElementsByName('mode'),
       buzzerPanel: document.getElementById('buzzerPanel'),
 
-      // références (si pas déjà présentes)
-		els.startRoundBtn = document.getElementById('startRoundBtn');
-
-	// Démarrer un round Buzzer immédiatement (simple et fiable)
-	els.startRoundBtn.addEventListener('click', () => {
-	  socket.emit('buzz:open');
-	  // Option: si tu veux le 3-2-1, remplace par un mini compte à rebours puis buzz:open
-	});
-	  
-	  // Quiz
+      // Quiz
       quizPanel: document.getElementById('quizPanel'),
-      quizLoadBtn: document.getElementById('quizLoadBtn'), quizRandomBtn: document.getElementById('quizRandomBtn'),
+      quizLoadBtn: document.getElementById('quizLoadBtn'),
+      quizRandomBtn: document.getElementById('quizRandomBtn'),
       quizLoadedInfo: document.getElementById('quizLoadedInfo'),
-      quizQuestion: document.getElementById('quizQuestion'), quizTrue: document.getElementById('quizTrue'),
-      quizFalse: document.getElementById('quizFalse'), quizSeconds: document.getElementById('quizSeconds'),
-      quizStartBtn: document.getElementById('quizStartBtn'), quizCloseBtn: document.getElementById('quizCloseBtn'),
+      quizQuestion: document.getElementById('quizQuestion'),
+      quizTrue: document.getElementById('quizTrue'),
+      quizFalse: document.getElementById('quizFalse'),
+      quizSeconds: document.getElementById('quizSeconds'),
+      quizStartBtn: document.getElementById('quizStartBtn'),
+      quizCloseBtn: document.getElementById('quizCloseBtn'),
       quizInfo: document.getElementById('quizInfo'),
 
       // Guess
       guessPanel: document.getElementById('guessPanel'),
-      guessLoadBtn: document.getElementById('guessLoadBtn'), guessRandomBtn: document.getElementById('guessRandomBtn'),
-      guessLoadedInfo: document.getElementById('guessLoadedInfo'), guessQuestion: document.getElementById('guessQuestion'),
-      guessCorrect: document.getElementById('guessCorrect'), guessMin: document.getElementById('guessMin'),
-      guessMax: document.getElementById('guessMax'), guessSeconds: document.getElementById('guessSeconds'),
-      guessStartBtn: document.getElementById('guessStartBtn'), guessCloseBtn: document.getElementById('guessCloseBtn'),
-      guessInfo: document.getElementById('guessInfo'), guessChart: document.getElementById('guessChart'),
+      guessLoadBtn: document.getElementById('guessLoadBtn'),
+      guessRandomBtn: document.getElementById('guessRandomBtn'),
+      guessLoadedInfo: document.getElementById('guessLoadedInfo'),
+      guessQuestion: document.getElementById('guessQuestion'),
+      guessCorrect: document.getElementById('guessCorrect'),
+      guessMin: document.getElementById('guessMin'),
+      guessMax: document.getElementById('guessMax'),
+      guessSeconds: document.getElementById('guessSeconds'),
+      guessStartBtn: document.getElementById('guessStartBtn'),
+      guessCloseBtn: document.getElementById('guessCloseBtn'),
+      guessInfo: document.getElementById('guessInfo'),
+      guessChart: document.getElementById('guessChart'),
       guessScale: document.getElementById('guessScale'),
 
       // Overlay question
       quizQOverlay: document.getElementById('quizQOverlay'),
-      quizQText: document.getElementById('quizQText'), quizTimer: document.getElementById('quizTimer'),
+      quizQText: document.getElementById('quizQText'),
+      quizTimer: document.getElementById('quizTimer'),
 
       // Trivia
       triviaPanel: document.getElementById('triviaPanel'),
       triviaLoadBtn: document.getElementById('triviaLoadBtn'),
       triviaPickBtn: document.getElementById('triviaPickBtn'),
       triviaStartBtn: document.getElementById('triviaStartBtn'),
-      triviaReviewNextBtn: document.getElementById('triviaReviewNextBtn'),
+      triviaNextBtn: document.getElementById('triviaNextBtn'),
       triviaResetBtn: document.getElementById('triviaResetBtn'),
       triviaLoadedInfo: document.getElementById('triviaLoadedInfo'),
       triviaStatus: document.getElementById('triviaStatus'),
@@ -256,164 +288,156 @@
 
     const socket = io();
     let room = generateRoomCode(5);
-    let bankQuiz=[], bankGuess=[], bankTrivia=[], triviaRound=[];
-    let overlayTimer=null;
-	let currentMode = null; // nouveau
 
+    // Timers
+    let cdTimer = null, overlayTimer = null;
+
+    // Banques
+    let bankQuiz = [], bankGuess = [], bankTrivia = [];
+    // Serie Trivia courante (20 questions)
+    let triviaRound = [], triviaIdx = 0, triviaSeconds = 15;
 
     function buildJoinUrl(){ const base=els.baseUrl.value.trim().replace(/\/+$/,''); return base + '/join?room=' + encodeURIComponent(room); }
     function renderInvite(){
       els.roomCode.textContent = room;
-      const url = buildJoinUrl();
-      els.joinLink.href = url || '#';
-      els.joinLink.textContent = 'Ouvrir ' + (url||'');
-      const qrApi='https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=';
-      els.qr.src = url ? (qrApi + encodeURIComponent(url)) : '';
+      const joinUrl = buildJoinUrl();
+      els.joinLink.href = joinUrl || '#';
+      els.joinLink.textContent = 'Ouvrir ' + (joinUrl||'');
+      const qrApi = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=';
+      els.qr.src = joinUrl ? (qrApi + encodeURIComponent(joinUrl)) : '';
     }
-    function renderPlayers(list){ els.players.innerHTML=''; (list||[]).forEach(p=>{ const li=document.createElement('li'); li.textContent=`${p.name} — ${p.score} pt${p.score>1?'s':''}${p.connected?' (en ligne)':''}`; els.players.appendChild(li); }); }
+    function renderPlayers(list){
+      els.players.innerHTML=''; (list||[]).forEach(p=>{const li=document.createElement('li'); li.textContent=`${p.name} — ${p.score} pt${p.score>1?'s':''}${p.connected?' (en ligne)':''}`; els.players.appendChild(li);});
+    }
+    function setStatus(t){ els.status.textContent=t||''; }
+    function stopCountdownUI(){ if(cdTimer){clearInterval(cdTimer); cdTimer=null;} els.countdown.classList.remove('show'); }
+    function showQuestionOverlay(q, seconds){
+      if(overlayTimer){clearInterval(overlayTimer); overlayTimer=null;}
+      els.quizQText.textContent=q;
+      let remain = seconds||15;
+      els.quizTimer.textContent = `Temps restant: ${remain}s`;
+      els.quizQOverlay.classList.add('show');
+      overlayTimer = setInterval(()=>{ remain--; if(remain>0){ els.quizTimer.textContent=`Temps restant: ${remain}s`; } else { clearInterval(overlayTimer); overlayTimer=null; } },1000);
+    }
+    function hideQuestionOverlay(){ if(overlayTimer){clearInterval(overlayTimer); overlayTimer=null;} els.quizQOverlay.classList.remove('show'); els.quizTimer.textContent=''; }
     function setModeUI(mode){
       els.buzzerPanel.style.display = (mode==='buzzer')?'':'none';
       els.quizPanel.style.display   = (mode==='quiz')?'':'none';
       els.guessPanel.style.display  = (mode==='guess')?'':'none';
       els.triviaPanel.style.display = (mode==='trivia')?'':'none';
-      for(const r of els.modeRadios) r.checked=(r.value===mode);
+      for(const r of els.modeRadios) r.checked = (r.value===mode);
     }
-    function showQuestionOverlay(q, seconds){
-      if(overlayTimer){ clearInterval(overlayTimer); overlayTimer=null; }
-      els.quizQText.textContent=q;
-      let remain=seconds||15;
-      els.quizTimer.textContent = `Temps restant: ${remain}s`;
-      els.quizQOverlay.classList.add('show');
-      // informer les joueurs pour afficher le chrono texte
-      socket.emit('countdown:start', remain);
-      overlayTimer = setInterval(()=>{ remain--; if(remain>0){ els.quizTimer.textContent=`Temps restant: ${remain}s`; } else { clearInterval(overlayTimer); overlayTimer=null; } }, 1000);
+    function renderGuessChart(prog){
+      els.guessChart.innerHTML=''; if(!prog||!Array.isArray(prog.bins)||!prog.bins.length) return;
+      const maxCount = Math.max(1, ...prog.bins.map(b=>b.count));
+      prog.bins.forEach(b=>{
+        const bar=document.createElement('div'); bar.className='bar';
+        const h = Math.round((b.count/maxCount)*100); bar.style.height=(h||2)+'%'; bar.title=`${b.from}–${b.to}: ${b.count}`;
+        const label=document.createElement('div'); label.className='bar-label'; label.textContent=b.count?b.count:'';
+        bar.appendChild(label); els.guessChart.appendChild(bar);
+      });
+      els.guessScale.innerHTML = `<span>${prog.min}</span><span>${prog.max}</span>`;
     }
-    function hideQuestionOverlay(){ if(overlayTimer){clearInterval(overlayTimer); overlayTimer=null;} els.quizQOverlay.classList.remove('show'); els.quizTimer.textContent=''; }
 
-    window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', function(){
       els.baseUrl.value = window.location.origin; renderInvite(); socket.emit('tv:create_room', room);
 
-      // Mode radios
       for(const r of els.modeRadios){ r.addEventListener('change', ()=>{ if(r.checked) socket.emit('mode:set', { mode: r.value }); }); }
 
       // Commun
-	socket.on('mode:changed', ({ mode }) => {
-	  const prev = currentMode;
-	  currentMode = mode;
-	  setModeUI(mode);
-
-	  // Ne faire les remises à zéro QUE si on change réellement de mode
-	  if (prev !== mode) {
-		els.overlay.classList.remove('show');
-		hideQuestionOverlay?.(); // si la fonction existe dans ton fichier
-		if (els.quizInfo) els.quizInfo.textContent = '';
-		if (els.guessInfo) els.guessInfo.textContent = '';
-		if (els.guessChart) els.guessChart.innerHTML = '';
-		if (els.triviaAnswers) els.triviaAnswers.innerHTML = '';
-		if (els.triviaCorrectWrap) els.triviaCorrectWrap.style.display = 'none';
-		if (els.triviaStatus) els.triviaStatus.textContent = '';
-	  }
-	});
+      socket.on('mode:changed', ({mode})=>{
+        setModeUI(mode); els.overlay.classList.remove('show'); stopCountdownUI(); hideQuestionOverlay();
+        els.quizInfo.textContent=''; els.guessInfo.textContent=''; els.guessChart.innerHTML='';
+        els.triviaStatus.textContent=''; els.triviaAnswers.innerHTML=''; els.triviaCorrectWrap.style.display='none';
+        setStatus(mode==='buzzer'?'Mode Buzzer': mode==='quiz'?'Mode Quiz': mode==='guess'?'Mode Devine':'Mode Culture generale');
+      });
       socket.on('room:players', renderPlayers);
-      socket.on('scores:reset', ()=>{ /* hint */ });
-      socket.on('round:reset', ()=>{ hideQuestionOverlay(); /* reset UI */ });
+      socket.on('scores:reset', ()=>setStatus('Scores reinitialises'));
+      socket.on('round:reset', ()=>{ els.overlay.classList.remove('show'); stopCountdownUI(); hideQuestionOverlay(); setStatus('Tour/Question reinitialise.'); });
+
+      // Countdown (affiche l'overlay 3-2-1 si on le souhaite; ici on garde l'overlay question separe)
+      socket.on('countdown:start', ({seconds})=>{
+        // pas d'overlay 3-2-1 ici; l'overlay question affiche déjà le timer
+      });
 
       // Buzzer
-      socket.on('round:winner', (d)=>{ els.winnerName.textContent=d.name; els.overlay.classList.add('show'); });
+      socket.on('round:open', ()=>{ els.overlay.classList.remove('show'); setStatus('Tour ouvert: le plus rapide gagne !'); });
+      socket.on('round:winner', (d)=>{ setStatus(`Gagnant: ${d.name} (+1)`); els.winnerName.textContent=d.name; els.overlay.classList.add('show'); });
 
       // Quiz
-      els.quizLoadBtn?.addEventListener('click', async()=>{ try{ const r=await fetch('/questions.json',{cache:'no-store'}); const d=await r.json(); if(!Array.isArray(d)) throw 0; bankQuiz=d; els.quizLoadedInfo.textContent=`${bankQuiz.length} question(s)`; els.quizRandomBtn.disabled=!bankQuiz.length; }catch{ alert('Impossible de charger /questions.json'); } });
-      els.quizRandomBtn?.addEventListener('click', ()=>{ if(!bankQuiz.length) return; const it=bankQuiz[Math.floor(Math.random()*bankQuiz.length)]; els.quizQuestion.value=it.q||''; (it.a?els.quizTrue:els.quizFalse).checked=true; });
-      els.quizStartBtn.addEventListener('click', ()=>{ const q=els.quizQuestion.value.trim(); if(!q) return alert('Entre une question'); const s=Math.max(1,Math.min(30,parseInt(els.quizSeconds.value||'5',10))); socket.emit('quiz:start', { question:q, correct: els.quizTrue.checked, seconds:s }); showQuestionOverlay(q, s); setTimeout(()=> socket.emit('quiz:close'), s*1000); });
-      socket.on('quiz:result', ({correct,countTrue,countFalse,total})=>{ hideQuestionOverlay(); els.quizInfo.textContent=`Bonne reponse: ${correct?'Vrai':'Faux'} — Vrai: ${countTrue}, Faux: ${countFalse}, Total: ${total}`; });
-      els.quizCloseBtn.addEventListener('click', ()=> socket.emit('quiz:close'));
+      socket.on('quiz:question', ({question, seconds})=>{
+        setModeUI('quiz'); els.quizInfo.textContent = `Question en cours (${seconds}s): "${question}"`;
+        showQuestionOverlay(question, seconds); socket.emit('countdown:start', seconds);
+        setTimeout(()=> socket.emit('quiz:close'), seconds*1000);
+      });
+      socket.on('quiz:result', ({correct, countTrue, countFalse, total})=>{
+        hideQuestionOverlay(); const txt = correct?'Vrai':'Faux';
+        els.quizInfo.textContent = `Bonne reponse: ${txt} — Vrai: ${countTrue}, Faux: ${countFalse}, Total: ${total}`;
+      });
 
       // Guess
-      els.guessLoadBtn.addEventListener('click', async()=>{ try{ const r=await fetch('/guess-questions.json',{cache:'no-store'}); const d=await r.json(); if(!Array.isArray(d)) throw 0; bankGuess=d; els.guessLoadedInfo.textContent=`${bankGuess.length} question(s)`; els.guessRandomBtn.disabled=!bankGuess.length; }catch{ alert('Impossible de charger /guess-questions.json'); } });
-      els.guessRandomBtn.addEventListener('click', ()=>{ if(!bankGuess.length) return; const it=bankGuess[Math.floor(Math.random()*bankGuess.length)]; els.guessQuestion.value=it.q||''; els.guessCorrect.value=it.c??''; els.guessMin.value=it.min??0; els.guessMax.value=it.max??100; els.guessSeconds.value=it.s??8; });
-      els.guessStartBtn.addEventListener('click', ()=>{ const q=els.guessQuestion.value.trim(); if(!q) return alert('Entre une question'); const s=Math.max(1,Math.min(60,parseInt(els.guessSeconds.value||'8',10))); socket.emit('guess:start',{question:q,correct:parseInt(els.guessCorrect.value||'0',10),min:parseInt(els.guessMin.value||'0',10),max:parseInt(els.guessMax.value||'100',10),seconds:s}); showQuestionOverlay(q, s); socket.emit('countdown:start', s); setTimeout(()=> socket.emit('guess:close'), s*1000); });
-      socket.on('guess:result', ({correct})=>{ hideQuestionOverlay(); els.guessInfo.textContent=`Réponse: ${correct}`; });
-
-      // Trivia — Culture générale
-      els.triviaLoadBtn.addEventListener('click', async()=>{
-        try{ const r=await fetch('/trivia-questions.json',{cache:'no-store'}); const d=await r.json(); if(!Array.isArray(d)) throw 0; bankTrivia=d; els.triviaLoadedInfo.textContent=`${bankTrivia.length} question(s)`; els.triviaPickBtn.disabled=!bankTrivia.length; }
-        catch{ alert('Impossible de charger /trivia-questions.json'); }
+      socket.on('guess:start', ({question, min, max, seconds})=>{
+        setModeUI('guess'); els.guessInfo.textContent=`Question en cours (${seconds}s) — Intervalle: ${min} à ${max}`;
+        showQuestionOverlay(question, seconds); els.guessChart.innerHTML=''; els.guessScale.innerHTML=`<span>${min}</span><span>${max}</span>`;
+        socket.emit('countdown:start', seconds); setTimeout(()=> socket.emit('guess:close'), seconds*1000);
       });
-      els.triviaPickBtn.addEventListener('click', ()=>{
-        if(!bankTrivia.length) return;
-        const arr=[...bankTrivia];
-        for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; }
-        triviaRound = arr.slice(0,20);
-        els.triviaStartBtn.disabled = !triviaRound.length;
-        els.triviaStatus.textContent = `Selection: ${triviaRound.length} question(s).`;
-      });
-      els.triviaStartBtn.addEventListener('click', ()=>{
-        if(!triviaRound.length) return alert('Choisis 20 questions');
-        socket.emit('mode:set', { mode: 'trivia' });
-        socket.emit('trivia:setup', { items: triviaRound, seconds: 15 });
-        socket.emit('trivia:start');
-        els.triviaReviewNextBtn.disabled = true; // activé après la phase questions
-      });
-      els.triviaReviewNextBtn.addEventListener('click', ()=>{
-        socket.emit('trivia:review_next');
-        els.triviaReviewNextBtn.disabled = true; // réactivé quand la question suivante arrive
-      });
-      els.triviaResetBtn.addEventListener('click', ()=>{
-        triviaRound=[]; els.triviaStartBtn.disabled=true; els.triviaReviewNextBtn.disabled=true;
-        els.triviaAnswers.innerHTML=''; els.triviaCorrectWrap.style.display='none'; els.triviaStatus.textContent='Serie reinitialisee.';
-        socket.emit('round:reset');
+      socket.on('guess:progress', (prog)=> renderGuessChart(prog));
+      socket.on('guess:result', ({correct,winners,bestDiff,tol})=>{
+        hideQuestionOverlay();
+        const maxShow=5, names=winners||[], shown=names.slice(0,maxShow).join(', '), more=names.length>maxShow?` (+${names.length-maxShow})`:'';
+        els.guessInfo.textContent = `Réponse: ${correct} — Gagnants: ${names.length?shown+more:'Aucun'} ${bestDiff!=null?`— meilleur écart: ${bestDiff}${tol?`, tol≈±${tol}`:''}`:''}`;
       });
 
-      // Phase questions (automatique)
+      // Trivia (Culture generale)
       socket.on('trivia:setup', ({ total, seconds })=>{
-        els.triviaStatus.textContent = `Serie prete: ${total} questions, ${seconds}s chacune.`;
+        triviaSeconds = seconds||15; triviaIdx = 0;
+        els.triviaStatus.textContent = `Serie prete: ${total} question(s), ${triviaSeconds}s chacune.`;
+        els.triviaStartBtn.disabled = false; els.triviaNextBtn.disabled = true;
       });
       socket.on('trivia:question', ({ index, total, question, seconds })=>{
         setModeUI('trivia');
+        triviaIdx = index-1;
         els.triviaStatus.textContent = `Question ${index}/${total}`;
-        els.triviaAnswers.innerHTML = '';
-        els.triviaCorrectWrap.style.display='none';
-        showQuestionOverlay(question, seconds || 15);
-        // pas de close côté TV: le serveur enchaîne
+        els.triviaAnswers.innerHTML = ''; els.triviaCorrectWrap.style.display='none';
+        showQuestionOverlay(question, seconds||triviaSeconds);
+        socket.emit('countdown:start', seconds||triviaSeconds);
+        setTimeout(()=> socket.emit('trivia:close'), (seconds||triviaSeconds)*1000);
       });
-      socket.on('trivia:closed', ({ index })=>{
+      socket.on('trivia:closed', ()=> {
         hideQuestionOverlay();
-        els.triviaStatus.textContent = `Question ${index} terminee...`;
+        // Afficher la bonne reponse (depuis notre selection locale si dispo)
+        const item = triviaRound[triviaIdx];
+        if (item && item.a != null) {
+          els.triviaCorrectWrap.style.display='';
+          els.triviaCorrect.textContent = String(item.a);
+        }
+        els.triviaNextBtn.disabled = false;
       });
-
-      // Phase revue
-      socket.on('trivia:review_start', ({ total })=>{
-        els.triviaStatus.textContent = `Correction — 1/${total}`;
-      });
-      socket.on('trivia:review', ({ index, total, question, correct, answers })=>{
-        hideQuestionOverlay();
-        els.triviaStatus.textContent = `Correction — ${index}/${total}`;
-        els.triviaCorrectWrap.style.display='';
-        els.triviaCorrect.textContent = String(correct ?? '');
+      socket.on('trivia:answers', ({ answers })=>{
+        // Afficher reponses sous forme de tuiles cliquables (toggle +1)
         els.triviaAnswers.innerHTML = '';
-        (answers || []).forEach(({ name, text, correct })=>{
-          const card=document.createElement('div');
-          card.className='answer-card' + (correct ? ' correct' : '');
-          card.dataset.name=name;
+        (answers||[]).forEach(({name,text})=>{
+          const card = document.createElement('div');
+          card.className = 'answer-card';
+          card.dataset.name = name;
           card.innerHTML = `<div class="answer-name">${name}</div><div class="answer-text">${text || '<i>(vide)</i>'}</div>`;
           card.addEventListener('click', ()=>{
-            const willBe = !card.classList.contains('correct');
-            socket.emit('trivia:review_mark', { name, correct: willBe });
+            const makeCorrect = !card.classList.contains('correct');
+            socket.emit('trivia:mark', { name, correct: makeCorrect });
           });
           els.triviaAnswers.appendChild(card);
         });
-        // activer "suivante" pour laisser le temps de corriger
-        els.triviaReviewNextBtn.disabled = false;
-        // afficher la question en overlay si tu veux: showQuestionOverlay(question, 0);
       });
       socket.on('trivia:marked', ({ name, correct })=>{
-        const cards = els.triviaAnswers.querySelectorAll('.answer-card');
-        cards.forEach(c => { if (c.dataset.name === name) c.classList.toggle('correct', !!correct); });
+        // Appliquer le style visuel
+        const nodes = els.triviaAnswers.querySelectorAll('.answer-card');
+        nodes.forEach(n=>{ if(n.dataset.name===name){ n.classList.toggle('correct', !!correct); }});
       });
       socket.on('trivia:summary', ({ scores })=>{
-        const lines=(scores||[]).map((s,i)=>`${i+1}. ${s.name} — ${s.score} pt${s.score>1?'s':''}`);
-        els.triviaStatus.textContent = 'Classement (mini-jeu): ' + (lines.join(' | ') || 'Aucun');
-        els.triviaReviewNextBtn.disabled = true;
+        // Rendu simple: afficher classement final dans Panel
+        const lines = (scores||[]).map((s,i)=> `${i+1}. ${s.name} — ${s.score} pt${s.score>1?'s':''}`);
+        els.triviaStatus.textContent = 'Fin de la serie — Classement: ' + (lines.join(' | ') || 'Aucun');
+        els.triviaNextBtn.disabled = true;
       });
 
       // Salle / Invite
@@ -421,6 +445,82 @@
       els.baseUrl.addEventListener('change', renderInvite);
       els.copyCodeBtn.addEventListener('click', async()=>{ try{ await navigator.clipboard.writeText(room); alert('Code copie'); }catch{} });
       els.copyLinkBtn.addEventListener('click', async()=>{ try{ await navigator.clipboard.writeText(buildJoinUrl()); alert('Lien copie'); }catch{} });
+
+      // Buzzer actions
+      els.startRoundBtn.addEventListener('click', ()=>{}); // Conservé si tu utilises encore le 3-2-1 buzzer plus haut
+      els.resetRoundBtn.addEventListener('click', ()=> socket.emit('round:reset'));
+      els.resetScoresBtn.addEventListener('click', ()=> socket.emit('scores:reset'));
+
+      // Quiz banque
+      els.quizLoadBtn?.addEventListener('click', async()=>{
+        try{ const r=await fetch('/questions.json',{cache:'no-store'}); const d=await r.json();
+          if(!Array.isArray(d)) throw new Error('format'); bankQuiz=d; els.quizLoadedInfo.textContent=`${bankQuiz.length} question(s)`; els.quizRandomBtn.disabled=!bankQuiz.length;
+        }catch{ alert('Impossible de charger /questions.json'); bankQuiz=[]; els.quizLoadedInfo.textContent=''; els.quizRandomBtn.disabled=true; }
+      });
+      els.quizRandomBtn?.addEventListener('click', ()=>{
+        if(!bankQuiz.length) return; const it=bankQuiz[Math.floor(Math.random()*bankQuiz.length)];
+        els.quizQuestion.value = it.q||''; if(it.a) els.quizTrue.checked=true; else els.quizFalse.checked=true;
+      });
+      els.quizStartBtn.addEventListener('click', ()=>{
+        const q=els.quizQuestion.value.trim(); const correct=els.quizTrue.checked;
+        const s=Math.max(1,Math.min(30,parseInt(els.quizSeconds.value||'5',10)));
+        if(!q){ alert('Entre une question'); return; }
+        socket.emit('quiz:start', { question:q, correct, seconds:s });
+        socket.emit('countdown:start', s);
+        setTimeout(()=> socket.emit('quiz:close'), s*1000);
+      });
+      els.quizCloseBtn.addEventListener('click', ()=> socket.emit('quiz:close'));
+
+      // Guess banque
+      els.guessLoadBtn.addEventListener('click', async()=>{
+        try{ const r=await fetch('/guess-questions.json',{cache:'no-store'}); const d=await r.json();
+          if(!Array.isArray(d)) throw new Error('format'); bankGuess=d; els.guessLoadedInfo.textContent=`${bankGuess.length} question(s)`; els.guessRandomBtn.disabled=!bankGuess.length;
+        }catch{ alert('Impossible de charger /guess-questions.json'); bankGuess=[]; els.guessLoadedInfo.textContent=''; els.guessRandomBtn.disabled=true; }
+      });
+      els.guessRandomBtn.addEventListener('click', ()=>{
+        if(!bankGuess.length) return; const it=bankGuess[Math.floor(Math.random()*bankGuess.length)];
+        els.guessQuestion.value=it.q||''; els.guessCorrect.value=it.c??''; els.guessMin.value=it.min??0; els.guessMax.value=it.max??100; els.guessSeconds.value=it.s??8;
+      });
+      els.guessStartBtn.addEventListener('click', ()=>{
+        const q=els.guessQuestion.value.trim(); if(!q){ alert('Entre une question'); return; }
+        const correct=parseInt(els.guessCorrect.value||'0',10); const min=parseInt(els.guessMin.value||'0',10);
+        const max=parseInt(els.guessMax.value||'100',10); const s=Math.max(1,Math.min(60,parseInt(els.guessSeconds.value||'8',10)));
+        socket.emit('guess:start',{question:q,correct,min,max,seconds:s}); socket.emit('countdown:start', s); setTimeout(()=> socket.emit('guess:close'), s*1000);
+      });
+      els.guessCloseBtn.addEventListener('click', ()=> socket.emit('guess:close'));
+
+      // Trivia banque
+      els.triviaLoadBtn.addEventListener('click', async()=>{
+        try{ const r=await fetch('/trivia-questions.json',{cache:'no-store'}); const d=await r.json();
+          if(!Array.isArray(d)) throw new Error('format'); bankTrivia=d;
+          els.triviaLoadedInfo.textContent=`${bankTrivia.length} question(s)`; els.triviaPickBtn.disabled=!bankTrivia.length;
+        }catch{ alert('Impossible de charger /trivia-questions.json'); bankTrivia=[]; els.triviaLoadedInfo.textContent=''; els.triviaPickBtn.disabled=true; }
+      });
+      els.triviaPickBtn.addEventListener('click', ()=>{
+        if(!bankTrivia.length) return;
+        const copy = [...bankTrivia];
+        // Mélange & sélection des 20
+        for(let i=copy.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [copy[i],copy[j]]=[copy[j],copy[i]]; }
+        triviaRound = copy.slice(0, 20);
+        els.triviaStartBtn.disabled = triviaRound.length===0;
+        els.triviaStatus.textContent = `Selectionnee: ${triviaRound.length} question(s).`;
+      });
+      els.triviaStartBtn.addEventListener('click', ()=>{
+        if(!triviaRound.length){ alert('Choisis 20 questions'); return; }
+        socket.emit('mode:set', { mode: 'trivia' });
+        socket.emit('trivia:setup', { items: triviaRound, seconds: 15 });
+        socket.emit('trivia:start');
+        els.triviaNextBtn.disabled = true;
+      });
+      els.triviaNextBtn.addEventListener('click', ()=>{
+        els.triviaNextBtn.disabled = true;
+        socket.emit('trivia:next');
+      });
+      els.triviaResetBtn.addEventListener('click', ()=>{
+        triviaRound=[]; triviaIdx=0; els.triviaStartBtn.disabled=true; els.triviaNextBtn.disabled=true;
+        els.triviaLoadedInfo.textContent=''; els.triviaAnswers.innerHTML=''; els.triviaCorrectWrap.style.display='none'; els.triviaStatus.textContent='Serie reinitialisee.';
+        socket.emit('round:reset');
+      });
     });
   </script>
 </body>

@@ -7,19 +7,19 @@ module.exports = {
     room.game = { open: false, question: '', correct: null, answers: new Map() };
   },
 
-  
-  // QUIZ — démarrer une question (NE PAS réémettre mode:changed ici)
-adminStart(io, room, code, { question, correct, seconds }) {
-  const q = String(question || '').trim().slice(0, 200);
-  const c = !!correct;
-  const sec = Math.max(1, Math.min(30, parseInt(seconds, 10) || 5));
+  adminStart(io, room, code, { question, correct, seconds }) {
+    const q = String(question || '').trim().slice(0, 200);
+    const c = !!correct;
 
-  room.game = { open: true, question: q, correct: c, answers: new Map() };
+    room.game = { open: true, question: q, correct: c, answers: new Map() };
 
-  // On suppose déjà en mode 'quiz' (ensureGame côté server.js si besoin)
-  io.to(code).emit('quiz:question', { question: q, seconds: sec });
-},
-
+    // S'assurer que les clients sont en mode quiz
+    io.to(code).emit('mode:changed', { mode: 'quiz' });
+    io.to(code).emit('quiz:question', {
+      question: q,
+      seconds: Math.max(1, Math.min(30, parseInt(seconds, 10) || 5))
+    });
+  },
 
   playerAnswer(io, room, code, playerName, answer, ack) {
     const g = room.game || {};
