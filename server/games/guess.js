@@ -31,32 +31,41 @@ module.exports = {
     };
   },
 
-  adminStart(io, room, code, { question, correct, min, max, seconds }) {
-    const q = String(question || '').trim().slice(0, 200);
+ // GUESS — démarrer (NE PAS réémettre mode:changed ici)
+adminStart(io, room, code, { question, correct, min, max, seconds }) {
+  const q = String(question || '').trim().slice(0, 200);
 
-    let lo = Number.isFinite(+min) ? parseInt(min, 10) : 0;
-    let hi = Number.isFinite(+max) ? parseInt(max, 10) : 100;
-    if (isNaN(lo)) lo = 0;
-    if (isNaN(hi)) hi = 100;
-    if (lo === hi) hi = lo + 1;
-    if (lo > hi) { const t = lo; lo = hi; hi = t; }
+  let lo = Number.isFinite(+min) ? parseInt(min, 10) : 0;
+  let hi = Number.isFinite(+max) ? parseInt(max, 10) : 100;
+  if (isNaN(lo)) lo = 0;
+  if (isNaN(hi)) hi = 100;
+  if (lo === hi) hi = lo + 1;
+  if (lo > hi) { const t = lo; lo = hi; hi = t; }
 
-    let corr = Number.isFinite(+correct) ? parseInt(correct, 10) : lo;
-    if (isNaN(corr)) corr = lo;
-    if (corr < lo) corr = lo;
-    if (corr > hi) corr = hi;
+  let corr = Number.isFinite(+correct) ? parseInt(correct, 10) : lo;
+  if (isNaN(corr)) corr = lo;
+  if (corr < lo) corr = lo;
+  if (corr > hi) corr = hi;
 
-    const sec = Math.max(1, Math.min(60, parseInt(seconds, 10) || 5));
+  const sec = Math.max(1, Math.min(60, parseInt(seconds, 10) || 5));
 
-    room.game = { open: true, question: q, correct: corr, min: lo, max: hi, answers: new Map() };
+  room.game = { open: true, question: q, correct: corr, min: lo, max: hi, answers: new Map() };
 
-    io.to(code).emit('mode:changed', { mode: 'guess' });
-    io.to(code).emit('guess:start', { question: q, min: lo, max: hi, seconds: sec });
+  // Pas de mode:changed ici (déjà en mode guess sinon ensureGame a basculé)
+  io.to(code).emit('guess:start', { question: q, min: lo, max: hi, seconds: sec });
 
-    // Progress initiale (0 réponses)
-    const prog = makeBins(lo, hi, room.game.answers);
-    io.to(code).emit('guess:progress', prog);
-  },
+  // Progression initiale (histogramme vide)
+  const span = Math.max(1, (hi - lo + 1));
+  const n = Math.max(1, Math.min(10, span));
+  const bins = Array.from({ length: n }, (_, i) => {
+    const size = span / n;
+    const from = Math.round(lo + i * size);
+    const to = Math.round(i === n - 1 ? hi : (lo + (i + 1) * size) - 1);
+    return { from, to, count: 0 };
+  });
+  io.to(code).emit('guess:progress', { bins, total: 0, min: lo, max: hi });
+},
+
 
   // Accepte les mises à jour: on conserve la dernière valeur (pas seulement la première)
   playerAnswer(io, room, code, playerName, value, ack) {

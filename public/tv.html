@@ -50,14 +50,16 @@
     </section>
 
     <!-- Buzzer -->
-    <section id="buzzerPanel" class="card">
-      <h2>Buzzer</h2>
-      <div class="row">
-        <button id="resetRoundBtn">Reinitialiser le tour</button>
-        <button id="resetScoresBtn">Reinitialiser les scores</button>
-      </div>
-      <div id="status" class="row"></div>
-    </section>
+	<section id="buzzerPanel" class="card">
+	  <h2>Buzzer</h2>
+	  <div class="row">
+		<button id="startRoundBtn" class="btn-green">Demarrer le tour</button>
+		<button id="resetRoundBtn">Reinitialiser le tour</button>
+		<button id="resetScoresBtn">Reinitialiser les scores</button>
+	  </div>
+	  <div id="status" class="row"></div>
+	</section>
+
 
     <!-- Quiz -->
     <section id="quizPanel" class="card" style="display:none;">
@@ -206,7 +208,16 @@
       modeRadios: document.getElementsByName('mode'),
       buzzerPanel: document.getElementById('buzzerPanel'),
 
-      // Quiz
+      // références (si pas déjà présentes)
+		els.startRoundBtn = document.getElementById('startRoundBtn');
+
+	// Démarrer un round Buzzer immédiatement (simple et fiable)
+	els.startRoundBtn.addEventListener('click', () => {
+	  socket.emit('buzz:open');
+	  // Option: si tu veux le 3-2-1, remplace par un mini compte à rebours puis buzz:open
+	});
+	  
+	  // Quiz
       quizPanel: document.getElementById('quizPanel'),
       quizLoadBtn: document.getElementById('quizLoadBtn'), quizRandomBtn: document.getElementById('quizRandomBtn'),
       quizLoadedInfo: document.getElementById('quizLoadedInfo'),
@@ -247,6 +258,8 @@
     let room = generateRoomCode(5);
     let bankQuiz=[], bankGuess=[], bankTrivia=[], triviaRound=[];
     let overlayTimer=null;
+	let currentMode = null; // nouveau
+
 
     function buildJoinUrl(){ const base=els.baseUrl.value.trim().replace(/\/+$/,''); return base + '/join?room=' + encodeURIComponent(room); }
     function renderInvite(){
@@ -284,7 +297,23 @@
       for(const r of els.modeRadios){ r.addEventListener('change', ()=>{ if(r.checked) socket.emit('mode:set', { mode: r.value }); }); }
 
       // Commun
-      socket.on('mode:changed', ({mode})=>{ setModeUI(mode); els.overlay.classList.remove('show'); hideQuestionOverlay(); els.triviaAnswers.innerHTML=''; els.triviaCorrectWrap.style.display='none'; els.triviaStatus.textContent=''; });
+	socket.on('mode:changed', ({ mode }) => {
+	  const prev = currentMode;
+	  currentMode = mode;
+	  setModeUI(mode);
+
+	  // Ne faire les remises à zéro QUE si on change réellement de mode
+	  if (prev !== mode) {
+		els.overlay.classList.remove('show');
+		hideQuestionOverlay?.(); // si la fonction existe dans ton fichier
+		if (els.quizInfo) els.quizInfo.textContent = '';
+		if (els.guessInfo) els.guessInfo.textContent = '';
+		if (els.guessChart) els.guessChart.innerHTML = '';
+		if (els.triviaAnswers) els.triviaAnswers.innerHTML = '';
+		if (els.triviaCorrectWrap) els.triviaCorrectWrap.style.display = 'none';
+		if (els.triviaStatus) els.triviaStatus.textContent = '';
+	  }
+	});
       socket.on('room:players', renderPlayers);
       socket.on('scores:reset', ()=>{ /* hint */ });
       socket.on('round:reset', ()=>{ hideQuestionOverlay(); /* reset UI */ });
