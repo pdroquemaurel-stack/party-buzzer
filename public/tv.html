@@ -52,7 +52,6 @@
       </div>
 
       <div class="stage-bottom">
-        <!-- Contrôles trivia / génériques -->
         <div class="stage-controls">
           <button id="btnReviewNext" class="hidden">Question suivante</button>
           <button id="btnExitStage" class="btn-pink">Quitter le mode jeu</button>
@@ -116,7 +115,7 @@
         <div id="status" class="row"></div>
       </section>
 
-      <!-- Quiz V/F -->
+      <!-- Quiz -->
       <section id="quizPanel" class="card" style="display:none;">
         <h2>Quiz Vrai/Faux</h2>
         <div class="card" style="background:#fafafa0f;">
@@ -225,51 +224,34 @@
 
     // DOM refs
     const els = {
-      // Admin
       admin: byId('admin'),
       roomCode: byId('roomCode'), baseUrl: byId('baseUrl'),
       joinLink: byId('joinLink'), qr: byId('qr'),
       regenBtn: byId('regenBtn'), copyCodeBtn: byId('copyCodeBtn'), copyLinkBtn: byId('copyLinkBtn'),
       players: byId('players'), status: byId('status'),
       resetRoundBtn: byId('resetRoundBtn'), resetScoresBtn: byId('resetScoresBtn'),
-
       modeRadios: document.getElementsByName('mode'),
       buzzerPanel: byId('buzzerPanel'), buzzerStart: byId('buzzerStart'),
       quizPanel: byId('quizPanel'), quizLoadBtn: byId('quizLoadBtn'), quizRandomBtn: byId('quizRandomBtn'),
       quizLoadedInfo: byId('quizLoadedInfo'), quizQuestion: byId('quizQuestion'),
       quizTrue: byId('quizTrue'), quizFalse: byId('quizFalse'), quizSeconds: byId('quizSeconds'),
       quizStartBtn: byId('quizStartBtn'), quizInfo: byId('quizInfo'),
-      guessPanel: byId('guessPanel'),
-      guessLoadBtn: byId('guessLoadBtn'), guessRandomBtn: byId('guessRandomBtn'), guessLoadedInfo: byId('guessLoadedInfo'),
-      guessQuestion: byId('guessQuestion'), guessCorrect: byId('guessCorrect'),
-      guessMin: byId('guessMin'), guessMax: byId('guessMax'), guessSeconds: byId('guessSeconds'),
-      guessStartBtn: byId('guessStartBtn'), guessInfo: byId('guessInfo'),
+      guessPanel: byId('guessPanel'), guessLoadBtn: byId('guessLoadBtn'), guessRandomBtn: byId('guessRandomBtn'),
+      guessLoadedInfo: byId('guessLoadedInfo'), guessQuestion: byId('guessQuestion'),
+      guessCorrect: byId('guessCorrect'), guessMin: byId('guessMin'), guessMax: byId('guessMax'),
+      guessSeconds: byId('guessSeconds'), guessStartBtn: byId('guessStartBtn'), guessInfo: byId('guessInfo'),
       triviaPanel: byId('triviaPanel'),
       triviaLoadBtn: byId('triviaLoadBtn'), triviaPickBtn: byId('triviaPickBtn'),
       triviaStartBtn: byId('triviaStartBtn'), triviaResetBtn: byId('triviaResetBtn'),
       triviaLoadedInfo: byId('triviaLoadedInfo'), triviaStatus: byId('triviaStatus'),
-
-      // Stage
-      stage: byId('stage'),
-      stageGame: byId('stageGame'),
-      stageRoom: byId('stageRoom'),
-      stageQNum: byId('stageQNum'),
-      stageQuestion: byId('stageQuestion'),
-      stageTimer: byId('stageTimer'),
-      stageWinnerWrap: byId('stageWinnerWrap'),
-      stageWinner: byId('stageWinner'),
-      stageChartWrap: byId('stageChartWrap'),
-      stageChart: byId('stageChart'),
-      stageScale: byId('stageScale'),
-      stageAnswersWrap: byId('stageAnswersWrap'),
-      stageCorrectWrap: byId('stageCorrectWrap'),
-      stageCorrect: byId('stageCorrect'),
-      stageAnswers: byId('stageAnswers'),
-      stageSummaryWrap: byId('stageSummaryWrap'),
-      stageSummary: byId('stageSummary'),
-      stageMessage: byId('stageMessage'),
-      btnExitStage: byId('btnExitStage'),
-      btnReviewNext: byId('btnReviewNext')
+      stage: byId('stage'), stageGame: byId('stageGame'), stageRoom: byId('stageRoom'),
+      stageQNum: byId('stageQNum'), stageQuestion: byId('stageQuestion'), stageTimer: byId('stageTimer'),
+      stageWinnerWrap: byId('stageWinnerWrap'), stageWinner: byId('stageWinner'),
+      stageChartWrap: byId('stageChartWrap'), stageChart: byId('stageChart'), stageScale: byId('stageScale'),
+      stageAnswersWrap: byId('stageAnswersWrap'), stageCorrectWrap: byId('stageCorrectWrap'),
+      stageCorrect: byId('stageCorrect'), stageAnswers: byId('stageAnswers'),
+      stageSummaryWrap: byId('stageSummaryWrap'), stageSummary: byId('stageSummary'),
+      stageMessage: byId('stageMessage'), btnExitStage: byId('btnExitStage'), btnReviewNext: byId('btnReviewNext')
     };
 
     // Utils
@@ -279,20 +261,17 @@
     function show(el, on=true){ el.classList.toggle('hidden', !on); }
     function clearStageTimer(){ if(stageTimer){ clearInterval(stageTimer); stageTimer=null; } }
 
-    // Stage (mode jeu) helpers
+    // Stage helpers
     function enterStage(gameLabel){
       inGame = true;
       setText(els.stageGame, gameLabel || 'Jeu');
       setText(els.stageRoom, 'Salle ' + (room || ''));
-      // Nettoyage
       setText(els.stageQNum,''); setText(els.stageQuestion,''); setText(els.stageTimer,'');
       setText(els.stageWinner,''); setText(els.stageMessage,'');
       els.stageSummary.innerHTML=''; els.stageAnswers.innerHTML=''; els.stageChart.innerHTML=''; setText(els.stageScale,'');
-      show(els.stageWinnerWrap,false); show(els.stageChartWrap,false);
-      show(els.stageAnswersWrap,false); show(els.stageCorrectWrap,false);
-      show(els.stageSummaryWrap,false); show(els.stageMessage,false);
+      show(els.stageWinnerWrap,false); show(els.stageChartWrap,false); show(els.stageAnswersWrap,false);
+      show(els.stageCorrectWrap,false); show(els.stageSummaryWrap,false); show(els.stageMessage,false);
       clearStageTimer();
-      // UI
       els.admin.classList.add('hidden');
       els.stage.classList.remove('hidden');
     }
@@ -301,14 +280,9 @@
       clearStageTimer();
       els.stage.classList.add('hidden');
       els.admin.classList.remove('hidden');
-      // Désactiver contrôles trivia review
       show(els.btnReviewNext,false);
     }
-    function stageShowQuestion(q, numText){
-      setText(els.stageQuestion, q || '');
-      setText(els.stageQNum, numText || '');
-      show(els.stageWinnerWrap,false); show(els.stageChartWrap,false); show(els.stageAnswersWrap,false); show(els.stageSummaryWrap,false);
-    }
+    function stageShowQuestion(q, numText){ setText(els.stageQuestion,q||''); setText(els.stageQNum,numText||''); show(els.stageWinnerWrap,false); show(els.stageChartWrap,false); show(els.stageAnswersWrap,false); show(els.stageSummaryWrap,false); }
     function stageSetTimer(seconds){
       clearStageTimer();
       let remain = seconds || 0;
@@ -321,10 +295,7 @@
         },1000);
       }
     }
-    function stageShowWinner(name){
-      show(els.stageWinnerWrap,true);
-      setText(els.stageWinner, name || '');
-    }
+    function stageShowWinner(name){ show(els.stageWinnerWrap,true); setText(els.stageWinner,name||''); }
     function stageRenderChart(prog){
       show(els.stageChartWrap,true);
       els.stageChart.innerHTML='';
@@ -350,7 +321,6 @@
         card.innerHTML = `<div class="answer-name">${name}</div><div class="answer-text">${text||'<i>(vide)</i>'}</div>`;
         card.addEventListener('click', ()=>{
           const will = !card.classList.contains('correct');
-          // Envoyer marque (mode trivia review)
           socket.emit('trivia:review_mark', { name, correct: will });
         });
         els.stageAnswers.appendChild(card);
@@ -358,18 +328,24 @@
     }
     function stageRenderSummary(scores){
       show(els.stageSummaryWrap,true);
-      els.stageSummary.innerHTML = '';
-      (scores||[]).forEach((s,i)=>{
-        const li=document.createElement('li');
-        li.textContent = `${i+1}. ${s.name} — ${s.score} pt${s.score>1?'s':''}`;
-        els.stageSummary.appendChild(li);
-      });
+      els.stageSummary.innerHTML='';
+      (scores||[]).forEach((s,i)=>{ const li=document.createElement('li'); li.textContent=`${i+1}. ${s.name} — ${s.score} pt${s.score>1?'s':''}`; els.stageSummary.appendChild(li); });
     }
-    function setStatus(t){ els.status.textContent = t || ''; }
+    function setStatus(t){ els.status.textContent=t||''; }
+
+    // Salle / lien
+    function buildJoinUrl(){ const base=els.baseUrl.value.trim().replace(/\/+$/,''); return base + '/join?room=' + encodeURIComponent(room); }
+    function renderInvite(){
+      els.roomCode.textContent = room;
+      const url = buildJoinUrl();
+      els.joinLink.href = url || '#';
+      els.joinLink.textContent = url ? ('Ouvrir ' + url) : 'Ouvrir /join';
+      els.qr.src = url ? 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data='+encodeURIComponent(url) : '';
+    }
 
     // Admin area setup
     window.addEventListener('DOMContentLoaded', ()=>{
-      // Salle
+      // Initialise salle + QR
       els.baseUrl.value = window.location.origin;
       renderInvite();
       socket.emit('tv:create_room', room);
@@ -379,28 +355,26 @@
         r.addEventListener('change', ()=>{ if(r.checked){ currentMode = r.value; socket.emit('mode:set', { mode: r.value }); }});
       }
 
-      // Buzzer start
+      // Buzzer start (avec 3-2-1 puis ouverture)
       els.buzzerStart.addEventListener('click', ()=>{
         currentMode='buzzer'; socket.emit('mode:set', { mode:'buzzer' });
         enterStage('Buzzer');
         stageShowQuestion('Préparez-vous...', '');
-        stageSetTimer(3); // visuel 3-2-1
-        // envoyer le countdown aux joueurs
+        stageSetTimer(3);
         socket.emit('countdown:start', 3);
         setTimeout(()=> socket.emit('buzz:open'), 3000);
       });
 
       // Quiz banque
       els.quizLoadBtn?.addEventListener('click', async()=>{
-        try{ const r=await fetch('/questions.json',{cache:'no-store'}); const d=await r.json();
-          if(!Array.isArray(d)) throw 0; bankQuiz=d; els.quizLoadedInfo.textContent=`${bankQuiz.length} question(s)`; els.quizRandomBtn.disabled = !bankQuiz.length;
-        }catch{ alert('Impossible de charger /questions.json'); }
+        try{ const r=await fetch('/questions.json',{cache:'no-store'}); const d=await r.json(); if(!Array.isArray(d)) throw 0; bankQuiz=d; els.quizLoadedInfo.textContent=`${bankQuiz.length} question(s)`; els.quizRandomBtn.disabled = !bankQuiz.length; }
+        catch{ alert('Impossible de charger /questions.json'); }
       });
       els.quizRandomBtn?.addEventListener('click', ()=>{
-        if(!bankQuiz.length) return;
-        const it=bankQuiz[Math.floor(Math.random()*bankQuiz.length)];
+        if(!bankQuiz.length) return; const it=bankQuiz[Math.floor(Math.random()*bankQuiz.length)];
         els.quizQuestion.value=it.q||''; (it.a?els.quizTrue:els.quizFalse).checked=true;
       });
+      // Quiz start (auto-clôture à la fin du chrono)
       els.quizStartBtn.addEventListener('click', ()=>{
         const q=els.quizQuestion.value.trim(); if(!q) return alert('Entre une question');
         const s=Math.max(1,Math.min(30,parseInt(els.quizSeconds.value||'5',10)));
@@ -409,19 +383,20 @@
         stageShowQuestion(q,''); stageSetTimer(s);
         socket.emit('quiz:start', { question:q, correct: els.quizTrue.checked, seconds:s });
         socket.emit('countdown:start', s);
+        // IMPORTANT: fermeture auto pour forcer résultat
+        setTimeout(()=> socket.emit('quiz:close'), s*1000);
       });
 
       // Guess banque
       els.guessLoadBtn.addEventListener('click', async()=>{
-        try{ const r=await fetch('/guess-questions.json',{cache:'no-store'}); const d=await r.json();
-          if(!Array.isArray(d)) throw 0; bankGuess=d; els.guessLoadedInfo.textContent=`${bankGuess.length} question(s)`; els.guessRandomBtn.disabled = !bankGuess.length;
-        }catch{ alert('Impossible de charger /guess-questions.json'); }
+        try{ const r=await fetch('/guess-questions.json',{cache:'no-store'}); const d=await r.json(); if(!Array.isArray(d)) throw 0; bankGuess=d; els.guessLoadedInfo.textContent=`${bankGuess.length} question(s)`; els.guessRandomBtn.disabled = !bankGuess.length; }
+        catch{ alert('Impossible de charger /guess-questions.json'); }
       });
       els.guessRandomBtn.addEventListener('click', ()=>{
-        if(!bankGuess.length) return;
-        const it=bankGuess[Math.floor(Math.random()*bankGuess.length)];
+        if(!bankGuess.length) return; const it=bankGuess[Math.floor(Math.random()*bankGuess.length)];
         els.guessQuestion.value=it.q||''; els.guessCorrect.value=it.c??''; els.guessMin.value=it.min??0; els.guessMax.value=it.max??100; els.guessSeconds.value=it.s??8;
       });
+      // Guess start (auto-clôture à la fin du chrono)
       els.guessStartBtn.addEventListener('click', ()=>{
         const q=els.guessQuestion.value.trim(); if(!q) return alert('Entre une question');
         const correct=parseInt(els.guessCorrect.value||'0',10);
@@ -432,13 +407,14 @@
         stageShowQuestion(q,''); stageSetTimer(s);
         socket.emit('guess:start', { question:q, correct, min, max, seconds:s });
         socket.emit('countdown:start', s);
+        // IMPORTANT: fermeture auto pour calculer gagnants
+        setTimeout(()=> socket.emit('guess:close'), s*1000);
       });
 
       // Trivia banque
       els.triviaLoadBtn.addEventListener('click', async()=>{
-        try{ const r=await fetch('/trivia-questions.json',{cache:'no-store'}); const d=await r.json();
-          if(!Array.isArray(d)) throw 0; bankTrivia=d; els.triviaLoadedInfo.textContent=`${bankTrivia.length} question(s)`; els.triviaPickBtn.disabled = !bankTrivia.length;
-        }catch{ alert('Impossible de charger /trivia-questions.json'); }
+        try{ const r=await fetch('/trivia-questions.json',{cache:'no-store'}); const d=await r.json(); if(!Array.isArray(d)) throw 0; bankTrivia=d; els.triviaLoadedInfo.textContent=`${bankTrivia.length} question(s)`; els.triviaPickBtn.disabled = !bankTrivia.length; }
+        catch{ alert('Impossible de charger /trivia-questions.json'); }
       });
       els.triviaPickBtn.addEventListener('click', ()=>{
         if(!bankTrivia.length) return;
@@ -447,6 +423,7 @@
         els.triviaStartBtn.disabled = !triviaRound.length;
         els.triviaStatus.textContent = `Sélection: ${triviaRound.length} questions.`;
       });
+      // Trivia start (série auto de 20, passage direct en revue ensuite)
       els.triviaStartBtn.addEventListener('click', ()=>{
         if(!triviaRound.length) return alert('Choisis 20 questions');
         currentMode='trivia'; socket.emit('mode:set', { mode:'trivia' });
@@ -472,7 +449,7 @@
     socket.on('room:players', renderPlayers);
     socket.on('mode:changed', ({ mode })=>{
       currentMode = mode;
-      // Ne PAS fermer la scène si on est en jeu
+      // si pas en jeu, on bascule l'UI admin; en jeu on reste en scène
       if (!inGame) setModeUI(mode);
     });
 
@@ -480,15 +457,10 @@
     socket.on('round:open', ()=>{
       if(!inGame) enterStage('Buzzer');
       stageShowQuestion('BUZZ !!!','');
-      setText(els.stageTimer,''); // pas de chrono TV après l’ouverture
+      setText(els.stageTimer,'');
     });
-    socket.on('round:winner', (d)=>{
-      stageShowWinner(d.name);
-    });
-    socket.on('round:reset', ()=>{
-      // si en jeu mais pas d’activité, on reste en scène; à toi d’appuyer “Quitter le mode jeu” si besoin
-      setStatus('Tour/Question réinitialisé.');
-    });
+    socket.on('round:winner', (d)=> stageShowWinner(d.name));
+    socket.on('round:reset', ()=> setStatus('Tour/Question réinitialisé.'));
 
     // Quiz
     socket.on('quiz:question', ({ question, seconds })=>{
@@ -497,6 +469,7 @@
       stageSetTimer(seconds||5);
     });
     socket.on('quiz:result', ({ correct, countTrue, countFalse, total })=>{
+      setText(els.stageQNum, 'Résultat');
       setText(els.stageQuestion, `Bonne réponse: ${correct ? 'Vrai' : 'Faux'}`);
       setText(els.stageTimer, `Vrai: ${countTrue}  |  Faux: ${countFalse}  |  Total: ${total}`);
     });
@@ -506,16 +479,16 @@
       if(!inGame){ currentMode='guess'; enterStage('Devine le nombre'); }
       stageShowQuestion(question, '');
       stageSetTimer(seconds||8);
-      // l’histogramme arrive via progress
     });
     socket.on('guess:progress', (prog)=> stageRenderChart(prog));
     socket.on('guess:result', ({ correct, winners, bestDiff, tol })=>{
+      setText(els.stageQNum, 'Résultat');
       setText(els.stageQuestion, 'Réponse: ' + correct);
       const n = winners?.length||0;
-      setText(els.stageTimer, n ? `Gagnants: ${winners.slice(0,5).join(', ')}${n>5?` (+${n-5})`:''}${bestDiff!=null?` — écart: ${bestDiff}${tol?`, tol≈±${tol}`:''}: ''}` : 'Aucun gagnant');
+      setText(els.stageTimer, n ? `Gagnants: ${winners.slice(0,5).join(', ')}${n>5?` (+${n-5})`:''}${bestDiff!=null?` — écart: ${bestDiff}${tol?`, tol≈±${tol}`:''}`:''}` : 'Aucun gagnant');
     });
 
-    // Trivia — phase questions auto
+    // Trivia — questions auto
     socket.on('trivia:setup', ({ total, seconds })=>{
       triviaSeconds = seconds||15;
       setStatus(`Série prête: ${total} questions, ${triviaSeconds}s chacune.`);
@@ -525,11 +498,9 @@
       stageShowQuestion(question, `Question ${index}/${total}`);
       stageSetTimer(seconds || triviaSeconds);
     });
-    socket.on('trivia:closed', ({ index })=>{
-      // la question suivante vient automatiquement
-    });
+    socket.on('trivia:closed', ({ index })=>{ /* question suivante auto par le serveur */ });
 
-    // Trivia — phase revue/correction
+    // Trivia — revue/correction
     socket.on('trivia:review_start', ({ total })=>{
       setText(els.stageMessage, 'Début de la correction'); show(els.stageMessage,true);
       show(els.btnReviewNext,false);
@@ -541,7 +512,6 @@
       show(els.btnReviewNext,true);
     });
     socket.on('trivia:marked', ({ name, correct })=>{
-      // Toggle visuel dans la grid
       const cards = els.stageAnswers.querySelectorAll('.answer-card');
       cards.forEach(c=>{ if(c.dataset.name===name) c.classList.toggle('correct', !!correct); });
     });
@@ -551,29 +521,13 @@
       show(els.btnReviewNext,false);
     });
 
-    // Helpers UI
-    function renderPlayers(list){
-      els.players.innerHTML='';
-      (list||[]).forEach(p=>{
-        const li=document.createElement('li');
-        li.textContent = `${p.name} — ${p.score} pt${p.score>1?'s':''}${p.connected?' (en ligne)':''}`;
-        els.players.appendChild(li);
-      });
-    }
+    // Admin helpers
     function setModeUI(mode){
       els.buzzerPanel.style.display = (mode==='buzzer')?'':'none';
       els.quizPanel.style.display   = (mode==='quiz')?'':'none';
       els.guessPanel.style.display  = (mode==='guess')?'':'none';
       els.triviaPanel.style.display = (mode==='trivia')?'':'none';
       for(const r of els.modeRadios) r.checked=(r.value===mode);
-    }
-    function buildJoinUrl(){ const base=els.baseUrl.value.trim().replace(/\/+$/,''); return base + '/join?room=' + encodeURIComponent(room); }
-    function renderInvite(){
-      els.roomCode.textContent = room;
-      const url = buildJoinUrl();
-      els.joinLink.href = url || '#';
-      els.joinLink.textContent = 'Ouvrir ' + (url||'');
-      els.qr.src = url ? 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data='+encodeURIComponent(url) : '';
     }
   </script>
 </body>
