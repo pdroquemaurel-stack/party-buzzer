@@ -16,7 +16,7 @@
         <div>
           <label>Code de salle:</label>
           <span id="roomCode" class="code"></span>
-          <button id="regenBtn">Regenerer</button>
+          <button id="regenBtn" class="btn-cyan">Regenerer</button>
           <button id="copyCodeBtn">Copier le code</button>
         </div>
       </div>
@@ -32,7 +32,7 @@
       <div class="row">
         <div class="field">
           <label>Lien d'invitation:</label>
-          <a id="joinLink" href="#" target="_blank" rel="noopener"></a>
+          <a id="joinLink" href="#" target="_blank" rel="noopener">Ouvrir /join</a>
           <button id="copyLinkBtn">Copier le lien</button>
         </div>
       </div>
@@ -48,6 +48,7 @@
         <label><input type="radio" name="mode" value="buzzer" checked /> Buzzer</label>
         <label style="margin-left:1rem;"><input type="radio" name="mode" value="quiz" /> Quiz Vrai/Faux</label>
         <label style="margin-left:1rem;"><input type="radio" name="mode" value="guess" /> Devine le nombre</label>
+        <label style="margin-left:1rem;"><input type="radio" name="mode" value="trivia" /> Culture generale</label>
       </div>
     </section>
 
@@ -55,7 +56,7 @@
     <section id="buzzerPanel" class="card">
       <h2>Buzzer</h2>
       <div class="row">
-        <button id="startRoundBtn">Demarrer le tour</button>
+        <button id="startRoundBtn" class="btn-green">Demarrer le tour</button>
         <button id="resetRoundBtn">Reinitialiser le tour</button>
         <button id="resetScoresBtn">Reinitialiser les scores</button>
       </div>
@@ -66,10 +67,10 @@
     <section id="quizPanel" class="card" style="display:none;">
       <h2>Quiz Vrai/Faux</h2>
 
-      <div class="card" style="background:#fafafa;">
-        <h3 style="margin-top:0;">Banque de questions (facultatif)</h3>
+      <div class="card" style="background:#fafafa0f;">
+        <h3 style="margin-top:0;">Banque (facultatif)</h3>
         <div class="row" style="display:flex; gap:.5rem; flex-wrap:wrap;">
-          <button id="quizLoadBtn">Charger la banque</button>
+          <button id="quizLoadBtn" class="btn-cyan">Charger la banque</button>
           <button id="quizRandomBtn" disabled>Question aléatoire</button>
           <span id="quizLoadedInfo" class="hint"></span>
         </div>
@@ -88,49 +89,49 @@
         <input id="quizSeconds" type="number" min="1" max="30" value="5" />
       </div>
       <div class="row">
-        <button id="quizStartBtn">Poser la question (3-2-1)</button>
+        <button id="quizStartBtn" class="btn-green">Poser la question (3-2-1)</button>
         <button id="quizCloseBtn">Clore et corriger maintenant</button>
       </div>
       <div id="quizInfo" class="row hint"></div>
     </section>
 
-    <!-- Devine le nombre -->
+    <!-- Guess -->
     <section id="guessPanel" class="card" style="display:none;">
       <h2>Devine le nombre</h2>
 
-      <div class="card" style="background:#fafafa;">
+      <div class="card" style="background:#fafafa0f;">
         <h3 style="margin-top:0;">Banque (facultatif)</h3>
         <div class="row" style="display:flex; gap:.5rem; flex-wrap:wrap;">
-          <button id="guessLoadBtn">Charger la banque</button>
+          <button id="guessLoadBtn" class="btn-cyan">Charger la banque</button>
           <button id="guessRandomBtn" disabled>Question aléatoire</button>
           <span id="guessLoadedInfo" class="hint"></span>
         </div>
       </div>
 
-      <div class="field">
-        <label>Question</label>
-        <input id="guessQuestion" type="text" placeholder="Ex: Combien font 7 x 8 ?" />
-      </div>
       <div class="row" style="display:flex; gap:1rem; flex-wrap:wrap;">
-        <div class="field" style="min-width:140px;">
-          <label>Réponse correcte</label>
+        <div class="field" style="flex:2; min-width:280px;">
+          <label>Question</label>
+          <input id="guessQuestion" type="text" placeholder="Ex: Combien font 7 x 8 ?" />
+        </div>
+        <div class="field" style="min-width:120px;">
+          <label>Réponse</label>
           <input id="guessCorrect" type="number" value="56" />
         </div>
-        <div class="field" style="min-width:140px;">
+        <div class="field" style="min-width:120px;">
           <label>Min</label>
           <input id="guessMin" type="number" value="0" />
         </div>
-        <div class="field" style="min-width:140px;">
+        <div class="field" style="min-width:120px;">
           <label>Max</label>
           <input id="guessMax" type="number" value="100" />
         </div>
-        <div class="field" style="min-width:140px;">
+        <div class="field" style="min-width:120px;">
           <label>Durée (s)</label>
           <input id="guessSeconds" type="number" min="1" max="60" value="8" />
         </div>
       </div>
       <div class="row">
-        <button id="guessStartBtn">Poser (3-2-1)</button>
+        <button id="guessStartBtn" class="btn-green">Poser (3-2-1)</button>
         <button id="guessCloseBtn">Clore et corriger maintenant</button>
       </div>
       <div id="guessInfo" class="row hint"></div>
@@ -139,6 +140,37 @@
         <label>Répartition des réponses</label>
         <div id="guessChart" class="chart"></div>
         <div id="guessScale" class="chart-scale"><span>Min</span><span>Max</span></div>
+      </div>
+    </section>
+
+    <!-- Trivia (Culture générale) -->
+    <section id="triviaPanel" class="card" style="display:none;">
+      <h2>Culture generale</h2>
+
+      <div class="card" style="background:#fafafa0f;">
+        <h3 style="margin-top:0;">Banque</h3>
+        <div class="row" style="display:flex; gap:.5rem; flex-wrap:wrap;">
+          <button id="triviaLoadBtn" class="btn-cyan">Charger /trivia-questions.json</button>
+          <button id="triviaPickBtn" disabled>Choisir 20 aleatoires</button>
+          <span id="triviaLoadedInfo" class="hint"></span>
+        </div>
+      </div>
+
+      <div class="row" style="display:flex; gap:1rem; align-items:center; flex-wrap:wrap;">
+        <button id="triviaStartBtn" class="btn-green" disabled>Demarrer la serie (20)</button>
+        <button id="triviaNextBtn" disabled>Question suivante</button>
+        <button id="triviaResetBtn">Reinitialiser</button>
+        <span id="triviaStatus" class="hint"></span>
+      </div>
+
+      <div id="triviaCorrectWrap" class="row" style="display:none;">
+        <strong>Bonne reponse:</strong> <span id="triviaCorrect" class="hint"></span>
+      </div>
+
+      <div class="field">
+        <label>Reponses des joueurs</label>
+        <div id="triviaAnswers" class="answers-grid"></div>
+        <small class="hint">Clique sur une reponse pour l'accorder (+1), clique encore pour annuler.</small>
       </div>
     </section>
 
@@ -166,6 +198,7 @@
     </div>
   </div>
 
+  <!-- Overlay Question (quiz/guess/trivia) -->
   <div id="quizQOverlay" class="overlay">
     <div>
       <div class="label">Question</div>
@@ -177,27 +210,11 @@
   <script src="/socket.io/socket.io.js"></script>
   <script>
     function generateRoomCode(len) {
-      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-      let out = '';
-      for (let i = 0; i < len; i++) out += chars[Math.floor(Math.random() * chars.length)];
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let out = '';
+      for (let i=0;i<len;i++) out += chars[Math.floor(Math.random()*chars.length)];
       return out;
     }
-    function playBeep(freq = 880, durMs = 120) {
-      try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const o = ctx.createOscillator();
-        const g = ctx.createGain();
-        o.type = 'sine'; o.frequency.value = freq;
-        o.connect(g); g.connect(ctx.destination);
-        g.gain.setValueAtTime(0.001, ctx.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.02);
-        o.start();
-        setTimeout(() => {
-          g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.1);
-          o.stop(ctx.currentTime + 0.12);
-        }, durMs);
-      } catch {}
-    }
+    function playBeep(freq=880,durMs=120){try{const c=new (window.AudioContext||window.webkitAudioContext)();const o=c.createOscillator();const g=c.createGain();o.type='sine';o.frequency.value=freq;o.connect(g);g.connect(c.destination);g.gain.setValueAtTime(0.001,c.currentTime);g.gain.exponentialRampToValueAtTime(0.3,c.currentTime+0.02);o.start();setTimeout(()=>{g.gain.exponentialRampToValueAtTime(0.0001,c.currentTime+0.1);o.stop(c.currentTime+0.12);},durMs);}catch{}}
 
     const els = {
       roomCode: document.getElementById('roomCode'),
@@ -253,233 +270,257 @@
       // Overlay question
       quizQOverlay: document.getElementById('quizQOverlay'),
       quizQText: document.getElementById('quizQText'),
-      quizTimer: document.getElementById('quizTimer')
+      quizTimer: document.getElementById('quizTimer'),
+
+      // Trivia
+      triviaPanel: document.getElementById('triviaPanel'),
+      triviaLoadBtn: document.getElementById('triviaLoadBtn'),
+      triviaPickBtn: document.getElementById('triviaPickBtn'),
+      triviaStartBtn: document.getElementById('triviaStartBtn'),
+      triviaNextBtn: document.getElementById('triviaNextBtn'),
+      triviaResetBtn: document.getElementById('triviaResetBtn'),
+      triviaLoadedInfo: document.getElementById('triviaLoadedInfo'),
+      triviaStatus: document.getElementById('triviaStatus'),
+      triviaAnswers: document.getElementById('triviaAnswers'),
+      triviaCorrectWrap: document.getElementById('triviaCorrectWrap'),
+      triviaCorrect: document.getElementById('triviaCorrect')
     };
 
     const socket = io();
     let room = generateRoomCode(5);
 
     // Timers
-    let cdTimer = null;
-    let quizTimer = null;
+    let cdTimer = null, overlayTimer = null;
 
     // Banques
-    let questionBankQuiz = [];
-    let questionBankGuess = [];
+    let bankQuiz = [], bankGuess = [], bankTrivia = [];
+    // Serie Trivia courante (20 questions)
+    let triviaRound = [], triviaIdx = 0, triviaSeconds = 15;
 
-    function buildJoinUrl() {
-      const base = els.baseUrl.value.trim().replace(/\/+$/, '');
-      return base + '/join?room=' + encodeURIComponent(room);
-    }
-    function renderInvite() {
+    function buildJoinUrl(){ const base=els.baseUrl.value.trim().replace(/\/+$/,''); return base + '/join?room=' + encodeURIComponent(room); }
+    function renderInvite(){
       els.roomCode.textContent = room;
       const joinUrl = buildJoinUrl();
-      els.joinLink.textContent = joinUrl || '(renseigne la Base URL)';
       els.joinLink.href = joinUrl || '#';
+      els.joinLink.textContent = 'Ouvrir ' + (joinUrl||'');
       const qrApi = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=';
       els.qr.src = joinUrl ? (qrApi + encodeURIComponent(joinUrl)) : '';
     }
-    function renderPlayers(list) {
-      els.players.innerHTML = '';
-      (list || []).forEach(p => {
-        const li = document.createElement('li');
-        li.textContent = `${p.name} — ${p.score} pt${p.score>1?'s':''}${p.connected?' (en ligne)':''}`;
-        els.players.appendChild(li);
-      });
+    function renderPlayers(list){
+      els.players.innerHTML=''; (list||[]).forEach(p=>{const li=document.createElement('li'); li.textContent=`${p.name} — ${p.score} pt${p.score>1?'s':''}${p.connected?' (en ligne)':''}`; els.players.appendChild(li);});
     }
-    function setStatus(text) { els.status.textContent = text || ''; }
-
-    function stopCountdownUI() {
-      if (cdTimer) { clearInterval(cdTimer); cdTimer = null; }
-      els.countdown.classList.remove('show');
-    }
-    function startCountdown(sec = 3, onEnd) {
-      stopCountdownUI();
-      els.countNum.textContent = sec;
-      els.countdown.classList.add('show');
-      socket.emit('countdown:start', sec);
-      playBeep(700, 120);
-      let remain = sec;
-      cdTimer = setInterval(() => {
-        remain--;
-        if (remain > 0) { els.countNum.textContent = remain; playBeep(700, 120); }
-        else { stopCountdownUI(); playBeep(1200, 200); if (typeof onEnd === 'function') onEnd(); }
-      }, 1000);
-    }
-
-    function showQuestionOverlay(question, seconds) {
-      if (quizTimer) { clearInterval(quizTimer); quizTimer = null; }
-      els.quizQText.textContent = question;
-      let remain = seconds || 5;
+    function setStatus(t){ els.status.textContent=t||''; }
+    function stopCountdownUI(){ if(cdTimer){clearInterval(cdTimer); cdTimer=null;} els.countdown.classList.remove('show'); }
+    function showQuestionOverlay(q, seconds){
+      if(overlayTimer){clearInterval(overlayTimer); overlayTimer=null;}
+      els.quizQText.textContent=q;
+      let remain = seconds||15;
       els.quizTimer.textContent = `Temps restant: ${remain}s`;
       els.quizQOverlay.classList.add('show');
-      quizTimer = setInterval(() => {
-        remain--;
-        if (remain > 0) els.quizTimer.textContent = `Temps restant: ${remain}s`;
-        else { clearInterval(quizTimer); quizTimer = null; }
-      }, 1000);
+      overlayTimer = setInterval(()=>{ remain--; if(remain>0){ els.quizTimer.textContent=`Temps restant: ${remain}s`; } else { clearInterval(overlayTimer); overlayTimer=null; } },1000);
     }
-    function hideQuestionOverlay() {
-      if (quizTimer) { clearInterval(quizTimer); quizTimer = null; }
-      els.quizQOverlay.classList.remove('show');
-      els.quizTimer.textContent = '';
+    function hideQuestionOverlay(){ if(overlayTimer){clearInterval(overlayTimer); overlayTimer=null;} els.quizQOverlay.classList.remove('show'); els.quizTimer.textContent=''; }
+    function setModeUI(mode){
+      els.buzzerPanel.style.display = (mode==='buzzer')?'':'none';
+      els.quizPanel.style.display   = (mode==='quiz')?'':'none';
+      els.guessPanel.style.display  = (mode==='guess')?'':'none';
+      els.triviaPanel.style.display = (mode==='trivia')?'':'none';
+      for(const r of els.modeRadios) r.checked = (r.value===mode);
     }
-
-    function setModeUI(mode) {
-      els.buzzerPanel.style.display = (mode === 'buzzer') ? '' : 'none';
-      els.quizPanel.style.display = (mode === 'quiz') ? '' : 'none';
-      els.guessPanel.style.display = (mode === 'guess') ? '' : 'none';
-      for (const r of els.modeRadios) r.checked = (r.value === mode);
-    }
-
-    function renderGuessChart(prog) {
-      // prog: { bins:[{from,to,count}], total, min, max }
-      els.guessChart.innerHTML = '';
-      if (!prog || !Array.isArray(prog.bins) || prog.bins.length === 0) return;
-      const maxCount = Math.max(1, ...prog.bins.map(b => b.count));
-      prog.bins.forEach(b => {
-        const bar = document.createElement('div');
-        bar.className = 'bar';
-        const h = Math.round((b.count / maxCount) * 100);
-        bar.style.height = (h || 2) + '%';
-        bar.title = `${b.from}–${b.to}: ${b.count}`;
-        const label = document.createElement('div');
-        label.className = 'bar-label';
-        label.textContent = b.count ? b.count : '';
-        bar.appendChild(label);
-        els.guessChart.appendChild(bar);
+    function renderGuessChart(prog){
+      els.guessChart.innerHTML=''; if(!prog||!Array.isArray(prog.bins)||!prog.bins.length) return;
+      const maxCount = Math.max(1, ...prog.bins.map(b=>b.count));
+      prog.bins.forEach(b=>{
+        const bar=document.createElement('div'); bar.className='bar';
+        const h = Math.round((b.count/maxCount)*100); bar.style.height=(h||2)+'%'; bar.title=`${b.from}–${b.to}: ${b.count}`;
+        const label=document.createElement('div'); label.className='bar-label'; label.textContent=b.count?b.count:'';
+        bar.appendChild(label); els.guessChart.appendChild(bar);
       });
       els.guessScale.innerHTML = `<span>${prog.min}</span><span>${prog.max}</span>`;
     }
 
-    window.addEventListener('DOMContentLoaded', function () {
-      els.baseUrl.value = window.location.origin;
-      renderInvite();
-      socket.emit('tv:create_room', room);
+    window.addEventListener('DOMContentLoaded', function(){
+      els.baseUrl.value = window.location.origin; renderInvite(); socket.emit('tv:create_room', room);
 
-      // Radios mode -> serveur
-      for (const r of els.modeRadios) r.addEventListener('change', () => { if (r.checked) socket.emit('mode:set', { mode: r.value }); });
+      for(const r of els.modeRadios){ r.addEventListener('change', ()=>{ if(r.checked) socket.emit('mode:set', { mode: r.value }); }); }
 
       // Commun
-      socket.on('mode:changed', ({ mode }) => {
-        setModeUI(mode);
-        els.overlay.classList.remove('show');
-        stopCountdownUI();
-        hideQuestionOverlay();
-        els.quizInfo.textContent = '';
-        els.guessInfo.textContent = '';
-        els.guessChart.innerHTML = '';
-        setStatus(mode === 'buzzer' ? 'Mode Buzzer' : mode === 'quiz' ? 'Mode Quiz' : 'Mode Devine');
+      socket.on('mode:changed', ({mode})=>{
+        setModeUI(mode); els.overlay.classList.remove('show'); stopCountdownUI(); hideQuestionOverlay();
+        els.quizInfo.textContent=''; els.guessInfo.textContent=''; els.guessChart.innerHTML='';
+        els.triviaStatus.textContent=''; els.triviaAnswers.innerHTML=''; els.triviaCorrectWrap.style.display='none';
+        setStatus(mode==='buzzer'?'Mode Buzzer': mode==='quiz'?'Mode Quiz': mode==='guess'?'Mode Devine':'Mode Culture generale');
       });
       socket.on('room:players', renderPlayers);
-      socket.on('scores:reset', () => setStatus('Scores reinitialises'));
-      socket.on('round:reset', () => { els.overlay.classList.remove('show'); stopCountdownUI(); hideQuestionOverlay(); setStatus('Tour/Question reinitialise.'); });
+      socket.on('scores:reset', ()=>setStatus('Scores reinitialises'));
+      socket.on('round:reset', ()=>{ els.overlay.classList.remove('show'); stopCountdownUI(); hideQuestionOverlay(); setStatus('Tour/Question reinitialise.'); });
+
+      // Countdown (affiche l'overlay 3-2-1 si on le souhaite; ici on garde l'overlay question separe)
+      socket.on('countdown:start', ({seconds})=>{
+        // pas d'overlay 3-2-1 ici; l'overlay question affiche déjà le timer
+      });
 
       // Buzzer
-      socket.on('round:open', () => { els.overlay.classList.remove('show'); setStatus('Tour ouvert: le plus rapide gagne !'); });
-      socket.on('round:winner', (data) => { setStatus(`Gagnant: ${data.name} (+1)`); els.winnerName.textContent = data.name; els.overlay.classList.add('show'); playBeep(1200, 200); });
+      socket.on('round:open', ()=>{ els.overlay.classList.remove('show'); setStatus('Tour ouvert: le plus rapide gagne !'); });
+      socket.on('round:winner', (d)=>{ setStatus(`Gagnant: ${d.name} (+1)`); els.winnerName.textContent=d.name; els.overlay.classList.add('show'); });
 
       // Quiz
-      socket.on('quiz:question', ({ question, seconds }) => { setModeUI('quiz'); els.quizInfo.textContent = `Question en cours (${seconds}s): "${question}"`; showQuestionOverlay(question, seconds); });
-      socket.on('quiz:result', ({ correct, countTrue, countFalse, total }) => { hideQuestionOverlay(); const txt = correct ? 'Vrai' : 'Faux'; els.quizInfo.textContent = `Bonne reponse: ${txt} — Vrai: ${countTrue}, Faux: ${countFalse}, Total: ${total}`; });
+      socket.on('quiz:question', ({question, seconds})=>{
+        setModeUI('quiz'); els.quizInfo.textContent = `Question en cours (${seconds}s): "${question}"`;
+        showQuestionOverlay(question, seconds); socket.emit('countdown:start', seconds);
+        setTimeout(()=> socket.emit('quiz:close'), seconds*1000);
+      });
+      socket.on('quiz:result', ({correct, countTrue, countFalse, total})=>{
+        hideQuestionOverlay(); const txt = correct?'Vrai':'Faux';
+        els.quizInfo.textContent = `Bonne reponse: ${txt} — Vrai: ${countTrue}, Faux: ${countFalse}, Total: ${total}`;
+      });
 
       // Guess
-      socket.on('guess:start', ({ question, min, max, seconds }) => {
-        setModeUI('guess');
-        els.guessInfo.textContent = `Question en cours (${seconds}s) — Intervalle: ${min} à ${max}`;
-        showQuestionOverlay(question, seconds);
-        els.guessChart.innerHTML = '';
-        els.guessScale.innerHTML = `<span>${min}</span><span>${max}</span>`;
+      socket.on('guess:start', ({question, min, max, seconds})=>{
+        setModeUI('guess'); els.guessInfo.textContent=`Question en cours (${seconds}s) — Intervalle: ${min} à ${max}`;
+        showQuestionOverlay(question, seconds); els.guessChart.innerHTML=''; els.guessScale.innerHTML=`<span>${min}</span><span>${max}</span>`;
+        socket.emit('countdown:start', seconds); setTimeout(()=> socket.emit('guess:close'), seconds*1000);
       });
-      socket.on('guess:progress', (prog) => {
-        renderGuessChart(prog);
-      });
-      socket.on('guess:result', ({ correct, winners, bestDiff, tol }) => {
+      socket.on('guess:progress', (prog)=> renderGuessChart(prog));
+      socket.on('guess:result', ({correct,winners,bestDiff,tol})=>{
         hideQuestionOverlay();
-        const maxShow = 5;
-        const names = winners || [];
-        const shown = names.slice(0, maxShow).join(', ');
-        const more = names.length > maxShow ? ` (+${names.length - maxShow})` : '';
-        const who = names.length ? shown + more : 'Aucun';
-        const detail = (bestDiff === null) ? '' : ` — meilleur écart: ${bestDiff}${tol ? `, tolérance≈±${tol}` : ''}`;
-        els.guessInfo.textContent = `Réponse: ${correct} — Gagnants: ${who}${detail}`;
+        const maxShow=5, names=winners||[], shown=names.slice(0,maxShow).join(', '), more=names.length>maxShow?` (+${names.length-maxShow})`:'';
+        els.guessInfo.textContent = `Réponse: ${correct} — Gagnants: ${names.length?shown+more:'Aucun'} ${bestDiff!=null?`— meilleur écart: ${bestDiff}${tol?`, tol≈±${tol}`:''}`:''}`;
       });
 
-      // Salle
-      els.regenBtn.addEventListener('click', () => { room = generateRoomCode(5); renderInvite(); socket.emit('tv:create_room', room); });
+      // Trivia (Culture generale)
+      socket.on('trivia:setup', ({ total, seconds })=>{
+        triviaSeconds = seconds||15; triviaIdx = 0;
+        els.triviaStatus.textContent = `Serie prete: ${total} question(s), ${triviaSeconds}s chacune.`;
+        els.triviaStartBtn.disabled = false; els.triviaNextBtn.disabled = true;
+      });
+      socket.on('trivia:question', ({ index, total, question, seconds })=>{
+        setModeUI('trivia');
+        triviaIdx = index-1;
+        els.triviaStatus.textContent = `Question ${index}/${total}`;
+        els.triviaAnswers.innerHTML = ''; els.triviaCorrectWrap.style.display='none';
+        showQuestionOverlay(question, seconds||triviaSeconds);
+        socket.emit('countdown:start', seconds||triviaSeconds);
+        setTimeout(()=> socket.emit('trivia:close'), (seconds||triviaSeconds)*1000);
+      });
+      socket.on('trivia:closed', ()=> {
+        hideQuestionOverlay();
+        // Afficher la bonne reponse (depuis notre selection locale si dispo)
+        const item = triviaRound[triviaIdx];
+        if (item && item.a != null) {
+          els.triviaCorrectWrap.style.display='';
+          els.triviaCorrect.textContent = String(item.a);
+        }
+        els.triviaNextBtn.disabled = false;
+      });
+      socket.on('trivia:answers', ({ answers })=>{
+        // Afficher reponses sous forme de tuiles cliquables (toggle +1)
+        els.triviaAnswers.innerHTML = '';
+        (answers||[]).forEach(({name,text})=>{
+          const card = document.createElement('div');
+          card.className = 'answer-card';
+          card.dataset.name = name;
+          card.innerHTML = `<div class="answer-name">${name}</div><div class="answer-text">${text || '<i>(vide)</i>'}</div>`;
+          card.addEventListener('click', ()=>{
+            const makeCorrect = !card.classList.contains('correct');
+            socket.emit('trivia:mark', { name, correct: makeCorrect });
+          });
+          els.triviaAnswers.appendChild(card);
+        });
+      });
+      socket.on('trivia:marked', ({ name, correct })=>{
+        // Appliquer le style visuel
+        const nodes = els.triviaAnswers.querySelectorAll('.answer-card');
+        nodes.forEach(n=>{ if(n.dataset.name===name){ n.classList.toggle('correct', !!correct); }});
+      });
+      socket.on('trivia:summary', ({ scores })=>{
+        // Rendu simple: afficher classement final dans Panel
+        const lines = (scores||[]).map((s,i)=> `${i+1}. ${s.name} — ${s.score} pt${s.score>1?'s':''}`);
+        els.triviaStatus.textContent = 'Fin de la serie — Classement: ' + (lines.join(' | ') || 'Aucun');
+        els.triviaNextBtn.disabled = true;
+      });
+
+      // Salle / Invite
+      els.regenBtn.addEventListener('click', ()=>{ room=generateRoomCode(5); renderInvite(); socket.emit('tv:create_room', room); });
       els.baseUrl.addEventListener('change', renderInvite);
-      els.copyCodeBtn.addEventListener('click', async () => { try { await navigator.clipboard.writeText(room); alert('Code copie'); } catch {} });
-      els.copyLinkBtn.addEventListener('click', async () => { try { await navigator.clipboard.writeText(buildJoinUrl()); alert('Lien copie'); } catch {} });
+      els.copyCodeBtn.addEventListener('click', async()=>{ try{ await navigator.clipboard.writeText(room); alert('Code copie'); }catch{} });
+      els.copyLinkBtn.addEventListener('click', async()=>{ try{ await navigator.clipboard.writeText(buildJoinUrl()); alert('Lien copie'); }catch{} });
 
       // Buzzer actions
-      els.startRoundBtn.addEventListener('click', () => startCountdown(3, () => socket.emit('buzz:open')));
-      els.resetRoundBtn.addEventListener('click', () => socket.emit('round:reset'));
-      els.resetScoresBtn.addEventListener('click', () => socket.emit('scores:reset'));
+      els.startRoundBtn.addEventListener('click', ()=>{}); // Conservé si tu utilises encore le 3-2-1 buzzer plus haut
+      els.resetRoundBtn.addEventListener('click', ()=> socket.emit('round:reset'));
+      els.resetScoresBtn.addEventListener('click', ()=> socket.emit('scores:reset'));
 
-      // Banque quiz
-      els.quizLoadBtn?.addEventListener('click', async () => {
-        try {
-          const res = await fetch('/questions.json', { cache: 'no-store' });
-          const data = await res.json();
-          if (!Array.isArray(data)) throw new Error('Format invalide');
-          questionBankQuiz = data;
-          els.quizLoadedInfo.textContent = `${questionBankQuiz.length} question(s) chargée(s).`;
-          els.quizRandomBtn.disabled = questionBankQuiz.length === 0;
-        } catch { alert('Impossible de charger /questions.json'); questionBankQuiz = []; els.quizLoadedInfo.textContent=''; els.quizRandomBtn.disabled = true; }
+      // Quiz banque
+      els.quizLoadBtn?.addEventListener('click', async()=>{
+        try{ const r=await fetch('/questions.json',{cache:'no-store'}); const d=await r.json();
+          if(!Array.isArray(d)) throw new Error('format'); bankQuiz=d; els.quizLoadedInfo.textContent=`${bankQuiz.length} question(s)`; els.quizRandomBtn.disabled=!bankQuiz.length;
+        }catch{ alert('Impossible de charger /questions.json'); bankQuiz=[]; els.quizLoadedInfo.textContent=''; els.quizRandomBtn.disabled=true; }
       });
-      els.quizRandomBtn?.addEventListener('click', () => {
-        if (!questionBankQuiz.length) return;
-        const item = questionBankQuiz[Math.floor(Math.random() * questionBankQuiz.length)];
-        els.quizQuestion.value = item.q || '';
-        if (item.a) els.quizTrue.checked = true; else els.quizFalse.checked = true;
+      els.quizRandomBtn?.addEventListener('click', ()=>{
+        if(!bankQuiz.length) return; const it=bankQuiz[Math.floor(Math.random()*bankQuiz.length)];
+        els.quizQuestion.value = it.q||''; if(it.a) els.quizTrue.checked=true; else els.quizFalse.checked=true;
       });
+      els.quizStartBtn.addEventListener('click', ()=>{
+        const q=els.quizQuestion.value.trim(); const correct=els.quizTrue.checked;
+        const s=Math.max(1,Math.min(30,parseInt(els.quizSeconds.value||'5',10)));
+        if(!q){ alert('Entre une question'); return; }
+        socket.emit('quiz:start', { question:q, correct, seconds:s });
+        socket.emit('countdown:start', s);
+        setTimeout(()=> socket.emit('quiz:close'), s*1000);
+      });
+      els.quizCloseBtn.addEventListener('click', ()=> socket.emit('quiz:close'));
 
-      // Quiz actions
-      els.quizStartBtn.addEventListener('click', () => {
-        const q = els.quizQuestion.value.trim();
-        const correct = els.quizTrue.checked;
-        const seconds = Math.max(1, Math.min(30, parseInt(els.quizSeconds.value || '5', 10)));
-        if (!q) { alert('Entre une question'); return; }
-        socket.emit('quiz:start', { question: q, correct, seconds });
-        socket.emit('countdown:start', seconds);
-        setTimeout(() => socket.emit('quiz:close'), seconds * 1000);
+      // Guess banque
+      els.guessLoadBtn.addEventListener('click', async()=>{
+        try{ const r=await fetch('/guess-questions.json',{cache:'no-store'}); const d=await r.json();
+          if(!Array.isArray(d)) throw new Error('format'); bankGuess=d; els.guessLoadedInfo.textContent=`${bankGuess.length} question(s)`; els.guessRandomBtn.disabled=!bankGuess.length;
+        }catch{ alert('Impossible de charger /guess-questions.json'); bankGuess=[]; els.guessLoadedInfo.textContent=''; els.guessRandomBtn.disabled=true; }
       });
-      els.quizCloseBtn.addEventListener('click', () => socket.emit('quiz:close'));
+      els.guessRandomBtn.addEventListener('click', ()=>{
+        if(!bankGuess.length) return; const it=bankGuess[Math.floor(Math.random()*bankGuess.length)];
+        els.guessQuestion.value=it.q||''; els.guessCorrect.value=it.c??''; els.guessMin.value=it.min??0; els.guessMax.value=it.max??100; els.guessSeconds.value=it.s??8;
+      });
+      els.guessStartBtn.addEventListener('click', ()=>{
+        const q=els.guessQuestion.value.trim(); if(!q){ alert('Entre une question'); return; }
+        const correct=parseInt(els.guessCorrect.value||'0',10); const min=parseInt(els.guessMin.value||'0',10);
+        const max=parseInt(els.guessMax.value||'100',10); const s=Math.max(1,Math.min(60,parseInt(els.guessSeconds.value||'8',10)));
+        socket.emit('guess:start',{question:q,correct,min,max,seconds:s}); socket.emit('countdown:start', s); setTimeout(()=> socket.emit('guess:close'), s*1000);
+      });
+      els.guessCloseBtn.addEventListener('click', ()=> socket.emit('guess:close'));
 
-      // Banque guess
-      els.guessLoadBtn.addEventListener('click', async () => {
-        try {
-          const res = await fetch('/guess-questions.json', { cache: 'no-store' });
-          const data = await res.json();
-          if (!Array.isArray(data)) throw new Error('Format invalide');
-          questionBankGuess = data;
-          els.guessLoadedInfo.textContent = `${questionBankGuess.length} question(s) chargée(s).`;
-          els.guessRandomBtn.disabled = questionBankGuess.length === 0;
-        } catch { alert('Impossible de charger /guess-questions.json'); questionBankGuess = []; els.guessLoadedInfo.textContent=''; els.guessRandomBtn.disabled = true; }
+      // Trivia banque
+      els.triviaLoadBtn.addEventListener('click', async()=>{
+        try{ const r=await fetch('/trivia-questions.json',{cache:'no-store'}); const d=await r.json();
+          if(!Array.isArray(d)) throw new Error('format'); bankTrivia=d;
+          els.triviaLoadedInfo.textContent=`${bankTrivia.length} question(s)`; els.triviaPickBtn.disabled=!bankTrivia.length;
+        }catch{ alert('Impossible de charger /trivia-questions.json'); bankTrivia=[]; els.triviaLoadedInfo.textContent=''; els.triviaPickBtn.disabled=true; }
       });
-      els.guessRandomBtn.addEventListener('click', () => {
-        if (!questionBankGuess.length) return;
-        const item = questionBankGuess[Math.floor(Math.random() * questionBankGuess.length)];
-        els.guessQuestion.value = item.q || '';
-        els.guessCorrect.value = item.c ?? '';
-        els.guessMin.value = item.min ?? 0;
-        els.guessMax.value = item.max ?? 100;
-        els.guessSeconds.value = item.s ?? 8;
+      els.triviaPickBtn.addEventListener('click', ()=>{
+        if(!bankTrivia.length) return;
+        const copy = [...bankTrivia];
+        // Mélange & sélection des 20
+        for(let i=copy.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [copy[i],copy[j]]=[copy[j],copy[i]]; }
+        triviaRound = copy.slice(0, 20);
+        els.triviaStartBtn.disabled = triviaRound.length===0;
+        els.triviaStatus.textContent = `Selectionnee: ${triviaRound.length} question(s).`;
       });
-
-      // Guess actions
-      els.guessStartBtn.addEventListener('click', () => {
-        const q = els.guessQuestion.value.trim();
-        if (!q) { alert('Entre une question'); return; }
-        const correct = parseInt(els.guessCorrect.value || '0', 10);
-        const min = parseInt(els.guessMin.value || '0', 10);
-        const max = parseInt(els.guessMax.value || '100', 10);
-        const seconds = Math.max(1, Math.min(60, parseInt(els.guessSeconds.value || '8', 10)));
-        socket.emit('guess:start', { question: q, correct, min, max, seconds });
-        socket.emit('countdown:start', seconds);
-        setTimeout(() => socket.emit('guess:close'), seconds * 1000);
+      els.triviaStartBtn.addEventListener('click', ()=>{
+        if(!triviaRound.length){ alert('Choisis 20 questions'); return; }
+        socket.emit('mode:set', { mode: 'trivia' });
+        socket.emit('trivia:setup', { items: triviaRound, seconds: 15 });
+        socket.emit('trivia:start');
+        els.triviaNextBtn.disabled = true;
       });
-      els.guessCloseBtn.addEventListener('click', () => socket.emit('guess:close'));
+      els.triviaNextBtn.addEventListener('click', ()=>{
+        els.triviaNextBtn.disabled = true;
+        socket.emit('trivia:next');
+      });
+      els.triviaResetBtn.addEventListener('click', ()=>{
+        triviaRound=[]; triviaIdx=0; els.triviaStartBtn.disabled=true; els.triviaNextBtn.disabled=true;
+        els.triviaLoadedInfo.textContent=''; els.triviaAnswers.innerHTML=''; els.triviaCorrectWrap.style.display='none'; els.triviaStatus.textContent='Serie reinitialisee.';
+        socket.emit('round:reset');
+      });
     });
   </script>
 </body>
