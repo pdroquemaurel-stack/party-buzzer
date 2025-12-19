@@ -7,257 +7,559 @@
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
-  <main class="container">
-    <h1>Ecran TV / Administration</h1>
+  <!-- SCENE PLEIN ECRAN (MODE JEU) -->
+  <div id="stage" class="stage hidden">
+    <div class="stage-inner">
+      <div class="stage-top">
+        <div id="stageGame" class="stage-tag">Jeu</div>
+        <div class="stage-spacer"></div>
+        <div id="stageRoom" class="stage-tag secondary"></div>
+      </div>
 
-    <section class="card">
-      <h2>Salle</h2>
-      <div class="row">
-        <div>
-          <label>Code de salle:</label>
-          <span id="roomCode" class="code"></span>
-          <button id="regenBtn" class="btn-cyan">Regenerer</button>
-          <button id="copyCodeBtn">Copier le code</button>
+      <div class="stage-center">
+        <div id="stageQNum" class="stage-qnum"></div>
+        <div id="stageQuestion" class="stage-question"></div>
+        <div id="stageTimer" class="stage-timer"></div>
+
+        <!-- Buzzer: gagnant -->
+        <div id="stageWinnerWrap" class="hidden">
+          <div class="stage-label">Gagnant</div>
+          <div id="stageWinner" class="stage-winner"></div>
+        </div>
+
+        <!-- Guess: histogramme -->
+        <div id="stageChartWrap" class="hidden">
+          <div class="stage-label">Répartition des réponses</div>
+          <div id="stageChart" class="chart"></div>
+          <div id="stageScale" class="chart-scale"></div>
+        </div>
+
+        <!-- Trivia: réponses à corriger -->
+        <div id="stageAnswersWrap" class="hidden">
+          <div class="stage-label">Réponses des joueurs</div>
+          <div id="stageCorrectWrap" class="row"><strong>Bonne réponse:</strong> <span id="stageCorrect" class="hint"></span></div>
+          <div id="stageAnswers" class="answers-grid"></div>
+        </div>
+
+        <!-- Résumé / Classement -->
+        <div id="stageSummaryWrap" class="hidden">
+          <div class="stage-label">Classement</div>
+          <ol id="stageSummary" class="stage-summary"></ol>
+        </div>
+
+        <!-- Message simple -->
+        <div id="stageMessage" class="stage-message hidden"></div>
+      </div>
+
+      <div class="stage-bottom">
+        <!-- Contrôles trivia / génériques -->
+        <div class="stage-controls">
+          <button id="btnReviewNext" class="hidden">Question suivante</button>
+          <button id="btnExitStage" class="btn-pink">Quitter le mode jeu</button>
         </div>
       </div>
-      <div class="row">
-        <div class="field">
-          <label>Base URL (pour generer le lien/QR):</label>
-          <input id="baseUrl" type="text" />
-          <small class="hint">Utilise l'URL Render (https://...onrender.com)</small>
-        </div>
-      </div>
-      <div class="row">
-        <div class="field">
-          <label>Lien d'invitation:</label>
-          <a id="joinLink" href="#" target="_blank" rel="noopener">Ouvrir /join</a>
-          <button id="copyLinkBtn">Copier le lien</button>
-        </div>
-      </div>
-      <div class="row qr">
-        <img id="qr" alt="QR code vers /join" width="220" height="220" />
-      </div>
-    </section>
-
-    <section class="card">
-      <h2>Mode de jeu</h2>
-      <div class="row">
-        <label><input type="radio" name="mode" value="buzzer" checked /> Buzzer</label>
-        <label style="margin-left:1rem;"><input type="radio" name="mode" value="quiz" /> Quiz Vrai/Faux</label>
-        <label style="margin-left:1rem;"><input type="radio" name="mode" value="guess" /> Devine le nombre</label>
-        <label style="margin-left:1rem;"><input type="radio" name="mode" value="trivia" /> Culture generale</label>
-      </div>
-    </section>
-
-    <!-- Buzzer -->
-    <section id="buzzerPanel" class="card">
-      <h2>Buzzer</h2>
-      <div class="row">
-        <button id="resetRoundBtn">Reinitialiser le tour</button>
-        <button id="resetScoresBtn">Reinitialiser les scores</button>
-      </div>
-      <div id="status" class="row"></div>
-    </section>
-
-    <!-- Quiz -->
-    <section id="quizPanel" class="card" style="display:none;">
-      <h2>Quiz Vrai/Faux</h2>
-      <div class="card" style="background:#fafafa0f;">
-        <h3 style="margin-top:0;">Banque (facultatif)</h3>
-        <div class="row" style="display:flex; gap:.5rem; flex-wrap:wrap;">
-          <button id="quizLoadBtn" class="btn-cyan">Charger la banque</button>
-          <button id="quizRandomBtn" disabled>Question aléatoire</button>
-          <span id="quizLoadedInfo" class="hint"></span>
-        </div>
-      </div>
-      <div class="field">
-        <label>Question</label>
-        <input id="quizQuestion" type="text" placeholder="Ex: Le Soleil est une étoile ?" />
-      </div>
-      <div class="row">
-        <label><input type="radio" name="quizCorrect" id="quizTrue" value="true" checked /> Vrai</label>
-        <label style="margin-left:1rem;"><input type="radio" name="quizCorrect" id="quizFalse" value="false" /> Faux</label>
-      </div>
-      <div class="field">
-        <label>Durée (secondes)</label>
-        <input id="quizSeconds" type="number" min="1" max="30" value="5" />
-      </div>
-      <div class="row">
-        <button id="quizStartBtn" class="btn-green">Poser la question</button>
-        <button id="quizCloseBtn">Clore et corriger</button>
-      </div>
-      <div id="quizInfo" class="row hint"></div>
-    </section>
-
-    <!-- Guess -->
-    <section id="guessPanel" class="card" style="display:none;">
-      <h2>Devine le nombre</h2>
-      <div class="card" style="background:#fafafa0f;">
-        <h3 style="margin-top:0;">Banque (facultatif)</h3>
-        <div class="row" style="display:flex; gap:.5rem; flex-wrap:wrap;">
-          <button id="guessLoadBtn" class="btn-cyan">Charger la banque</button>
-          <button id="guessRandomBtn" disabled>Question aléatoire</button>
-          <span id="guessLoadedInfo" class="hint"></span>
-        </div>
-      </div>
-      <div class="row" style="display:flex; gap:1rem; flex-wrap:wrap;">
-        <div class="field" style="flex:2; min-width:280px;">
-          <label>Question</label>
-          <input id="guessQuestion" type="text" placeholder="Ex: Combien font 7 x 8 ?" />
-        </div>
-        <div class="field" style="min-width:120px;">
-          <label>Réponse</label>
-          <input id="guessCorrect" type="number" value="56" />
-        </div>
-        <div class="field" style="min-width:120px;">
-          <label>Min</label>
-          <input id="guessMin" type="number" value="0" />
-        </div>
-        <div class="field" style="min-width:120px;">
-          <label>Max</label>
-          <input id="guessMax" type="number" value="100" />
-        </div>
-        <div class="field" style="min-width:120px;">
-          <label>Durée (s)</label>
-          <input id="guessSeconds" type="number" min="1" max="60" value="8" />
-        </div>
-      </div>
-      <div class="row">
-        <button id="guessStartBtn" class="btn-green">Poser</button>
-        <button id="guessCloseBtn">Clore et corriger</button>
-      </div>
-      <div id="guessInfo" class="row hint"></div>
-      <div class="field">
-        <label>Répartition des réponses</label>
-        <div id="guessChart" class="chart"></div>
-        <div id="guessScale" class="chart-scale"><span>Min</span><span>Max</span></div>
-      </div>
-    </section>
-
-    <!-- Trivia (Culture générale) -->
-    <section id="triviaPanel" class="card" style="display:none;">
-      <h2>Culture generale</h2>
-
-      <div class="card" style="background:#fafafa0f;">
-        <h3 style="margin-top:0;">Banque</h3>
-        <div class="row" style="display:flex; gap:.5rem; flex-wrap:wrap;">
-          <button id="triviaLoadBtn" class="btn-cyan">Charger /trivia-questions.json</button>
-          <button id="triviaPickBtn" disabled>Choisir 20 aleatoires</button>
-          <span id="triviaLoadedInfo" class="hint"></span>
-        </div>
-      </div>
-
-      <div class="row" style="display:flex; gap:1rem; align-items:center; flex-wrap:wrap;">
-        <button id="triviaStartBtn" class="btn-green" disabled>Demarrer la serie (20)</button>
-        <button id="triviaReviewNextBtn" disabled>Question suivante (correction)</button>
-        <button id="triviaResetBtn">Reinitialiser</button>
-        <span id="triviaStatus" class="hint"></span>
-      </div>
-
-      <div id="triviaCorrectWrap" class="row" style="display:none;">
-        <strong>Bonne reponse:</strong> <span id="triviaCorrect" class="hint"></span>
-      </div>
-
-      <div class="field">
-        <label>Reponses des joueurs (phase correction)</label>
-        <div id="triviaAnswers" class="answers-grid"></div>
-        <small class="hint">Clique une tuile pour marquer comme correcte (vert). Puis “Question suivante”.</small>
-      </div>
-    </section>
-
-    <section class="card">
-      <h2>Joueurs</h2>
-      <ul id="players"></ul>
-    </section>
-
-    <p><a href="/">Retour a l'accueil</a></p>
-  </main>
-
-  <!-- Overlays -->
-  <div id="overlay" class="overlay" onclick="this.classList.remove('show')">
-    <div>
-      <div class="label">Gagnant</div>
-      <div id="winnerName" class="winner"></div>
-      <div class="hint">(cliquer pour fermer)</div>
     </div>
   </div>
 
-  <div id="quizQOverlay" class="overlay">
-    <div>
-      <div class="label">Question</div>
-      <div id="quizQText" class="question"></div>
-      <div id="quizTimer" class="hint" style="margin-top:.8rem;"></div>
-    </div>
+  <!-- INTERFACE ADMIN (MASQUÉE EN MODE JEU) -->
+  <div id="admin">
+    <main class="container">
+      <h1>Ecran TV / Administration</h1>
+
+      <section class="card">
+        <h2>Salle</h2>
+        <div class="row">
+          <div>
+            <label>Code de salle:</label>
+            <span id="roomCode" class="code"></span>
+            <button id="regenBtn" class="btn-cyan">Regenerer</button>
+            <button id="copyCodeBtn">Copier le code</button>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>Base URL (pour generer le lien/QR):</label>
+            <input id="baseUrl" type="text" />
+            <small class="hint">Utilise l'URL Render (https://...onrender.com)</small>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>Lien d'invitation:</label>
+            <a id="joinLink" href="#" target="_blank" rel="noopener">Ouvrir /join</a>
+            <button id="copyLinkBtn">Copier le lien</button>
+          </div>
+        </div>
+        <div class="row qr">
+          <img id="qr" alt="QR code vers /join" width="220" height="220" />
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Mode de jeu</h2>
+        <div class="row">
+          <label><input type="radio" name="mode" value="buzzer" checked /> Buzzer</label>
+          <label style="margin-left:1rem;"><input type="radio" name="mode" value="quiz" /> Quiz Vrai/Faux</label>
+          <label style="margin-left:1rem;"><input type="radio" name="mode" value="guess" /> Devine le nombre</label>
+          <label style="margin-left:1rem;"><input type="radio" name="mode" value="trivia" /> Culture generale</label>
+        </div>
+      </section>
+
+      <!-- Buzzer -->
+      <section id="buzzerPanel" class="card">
+        <h2>Buzzer</h2>
+        <div class="row">
+          <button id="buzzerStart" class="btn-green">Démarrer (3‑2‑1)</button>
+          <button id="resetRoundBtn">Reinitialiser le tour</button>
+          <button id="resetScoresBtn">Reinitialiser les scores</button>
+        </div>
+        <div id="status" class="row"></div>
+      </section>
+
+      <!-- Quiz V/F -->
+      <section id="quizPanel" class="card" style="display:none;">
+        <h2>Quiz Vrai/Faux</h2>
+        <div class="card" style="background:#fafafa0f;">
+          <h3 style="margin-top:0;">Banque (facultatif)</h3>
+          <div class="row" style="display:flex; gap:.5rem; flex-wrap:wrap;">
+            <button id="quizLoadBtn" class="btn-cyan">Charger la banque</button>
+            <button id="quizRandomBtn" disabled>Question aléatoire</button>
+            <span id="quizLoadedInfo" class="hint"></span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Question</label>
+          <input id="quizQuestion" type="text" placeholder="Ex: Le Soleil est une étoile ?" />
+        </div>
+        <div class="row">
+          <label><input type="radio" name="quizCorrect" id="quizTrue" value="true" checked /> Vrai</label>
+          <label style="margin-left:1rem;"><input type="radio" name="quizCorrect" id="quizFalse" value="false" /> Faux</label>
+        </div>
+        <div class="field">
+          <label>Durée (secondes)</label>
+          <input id="quizSeconds" type="number" min="1" max="30" value="5" />
+        </div>
+        <div class="row">
+          <button id="quizStartBtn" class="btn-green">Poser (3‑2‑1)</button>
+        </div>
+        <div id="quizInfo" class="row hint"></div>
+      </section>
+
+      <!-- Guess -->
+      <section id="guessPanel" class="card" style="display:none;">
+        <h2>Devine le nombre</h2>
+        <div class="card" style="background:#fafafa0f;">
+          <h3 style="margin-top:0;">Banque (facultatif)</h3>
+          <div class="row" style="display:flex; gap:.5rem; flex-wrap:wrap;">
+            <button id="guessLoadBtn" class="btn-cyan">Charger la banque</button>
+            <button id="guessRandomBtn" disabled>Question aléatoire</button>
+            <span id="guessLoadedInfo" class="hint"></span>
+          </div>
+        </div>
+        <div class="row" style="display:flex; gap:1rem; flex-wrap:wrap;">
+          <div class="field" style="flex:2; min-width:280px;">
+            <label>Question</label>
+            <input id="guessQuestion" type="text" placeholder="Ex: Combien font 7 x 8 ?" />
+          </div>
+          <div class="field" style="min-width:120px;">
+            <label>Réponse</label>
+            <input id="guessCorrect" type="number" value="56" />
+          </div>
+          <div class="field" style="min-width:120px;">
+            <label>Min</label>
+            <input id="guessMin" type="number" value="0" />
+          </div>
+          <div class="field" style="min-width:120px;">
+            <label>Max</label>
+            <input id="guessMax" type="number" value="100" />
+          </div>
+          <div class="field" style="min-width:120px;">
+            <label>Durée (s)</label>
+            <input id="guessSeconds" type="number" min="1" max="60" value="8" />
+          </div>
+        </div>
+        <div class="row">
+          <button id="guessStartBtn" class="btn-green">Poser (3‑2‑1)</button>
+        </div>
+        <div id="guessInfo" class="row hint"></div>
+      </section>
+
+      <!-- Trivia -->
+      <section id="triviaPanel" class="card" style="display:none;">
+        <h2>Culture generale</h2>
+        <div class="card" style="background:#fafafa0f;">
+          <h3 style="margin-top:0;">Banque</h3>
+          <div class="row" style="display:flex; gap:.5rem; flex-wrap:wrap;">
+            <button id="triviaLoadBtn" class="btn-cyan">Charger /trivia-questions.json</button>
+            <button id="triviaPickBtn" disabled>Choisir 20 aleatoires</button>
+            <span id="triviaLoadedInfo" class="hint"></span>
+          </div>
+        </div>
+        <div class="row" style="display:flex; gap:1rem; align-items:center; flex-wrap:wrap;">
+          <button id="triviaStartBtn" class="btn-green" disabled>Démarrer la série (20)</button>
+          <button id="triviaResetBtn">Réinitialiser</button>
+          <span id="triviaStatus" class="hint"></span>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Joueurs</h2>
+        <ul id="players"></ul>
+      </section>
+
+      <p><a href="/">Retour à l'accueil</a></p>
+    </main>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    function generateRoomCode(len){ const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let o=''; for(let i=0;i<len;i++) o+=c[Math.floor(Math.random()*c.length)]; return o; }
+    const socket = io();
 
+    // State
+    let room = generateRoomCode(5);
+    let currentMode = 'buzzer';
+    let inGame = false;
+    let stageTimer = null;
+    let bankQuiz=[], bankGuess=[], bankTrivia=[], triviaRound=[];
+    let triviaSeconds = 15;
+
+    // DOM refs
     const els = {
-      roomCode: document.getElementById('roomCode'), baseUrl: document.getElementById('baseUrl'),
-      joinLink: document.getElementById('joinLink'), qr: document.getElementById('qr'),
-      regenBtn: document.getElementById('regenBtn'), copyCodeBtn: document.getElementById('copyCodeBtn'),
-      copyLinkBtn: document.getElementById('copyLinkBtn'), players: document.getElementById('players'),
-      status: document.getElementById('status'),
-      resetRoundBtn: document.getElementById('resetRoundBtn'), resetScoresBtn: document.getElementById('resetScoresBtn'),
-      overlay: document.getElementById('overlay'), winnerName: document.getElementById('winnerName'),
+      // Admin
+      admin: byId('admin'),
+      roomCode: byId('roomCode'), baseUrl: byId('baseUrl'),
+      joinLink: byId('joinLink'), qr: byId('qr'),
+      regenBtn: byId('regenBtn'), copyCodeBtn: byId('copyCodeBtn'), copyLinkBtn: byId('copyLinkBtn'),
+      players: byId('players'), status: byId('status'),
+      resetRoundBtn: byId('resetRoundBtn'), resetScoresBtn: byId('resetScoresBtn'),
 
       modeRadios: document.getElementsByName('mode'),
-      buzzerPanel: document.getElementById('buzzerPanel'),
+      buzzerPanel: byId('buzzerPanel'), buzzerStart: byId('buzzerStart'),
+      quizPanel: byId('quizPanel'), quizLoadBtn: byId('quizLoadBtn'), quizRandomBtn: byId('quizRandomBtn'),
+      quizLoadedInfo: byId('quizLoadedInfo'), quizQuestion: byId('quizQuestion'),
+      quizTrue: byId('quizTrue'), quizFalse: byId('quizFalse'), quizSeconds: byId('quizSeconds'),
+      quizStartBtn: byId('quizStartBtn'), quizInfo: byId('quizInfo'),
+      guessPanel: byId('guessPanel'),
+      guessLoadBtn: byId('guessLoadBtn'), guessRandomBtn: byId('guessRandomBtn'), guessLoadedInfo: byId('guessLoadedInfo'),
+      guessQuestion: byId('guessQuestion'), guessCorrect: byId('guessCorrect'),
+      guessMin: byId('guessMin'), guessMax: byId('guessMax'), guessSeconds: byId('guessSeconds'),
+      guessStartBtn: byId('guessStartBtn'), guessInfo: byId('guessInfo'),
+      triviaPanel: byId('triviaPanel'),
+      triviaLoadBtn: byId('triviaLoadBtn'), triviaPickBtn: byId('triviaPickBtn'),
+      triviaStartBtn: byId('triviaStartBtn'), triviaResetBtn: byId('triviaResetBtn'),
+      triviaLoadedInfo: byId('triviaLoadedInfo'), triviaStatus: byId('triviaStatus'),
 
-      // Quiz
-      quizPanel: document.getElementById('quizPanel'),
-      quizLoadBtn: document.getElementById('quizLoadBtn'), quizRandomBtn: document.getElementById('quizRandomBtn'),
-      quizLoadedInfo: document.getElementById('quizLoadedInfo'),
-      quizQuestion: document.getElementById('quizQuestion'), quizTrue: document.getElementById('quizTrue'),
-      quizFalse: document.getElementById('quizFalse'), quizSeconds: document.getElementById('quizSeconds'),
-      quizStartBtn: document.getElementById('quizStartBtn'), quizCloseBtn: document.getElementById('quizCloseBtn'),
-      quizInfo: document.getElementById('quizInfo'),
-
-      // Guess
-      guessPanel: document.getElementById('guessPanel'),
-      guessLoadBtn: document.getElementById('guessLoadBtn'), guessRandomBtn: document.getElementById('guessRandomBtn'),
-      guessLoadedInfo: document.getElementById('guessLoadedInfo'), guessQuestion: document.getElementById('guessQuestion'),
-      guessCorrect: document.getElementById('guessCorrect'), guessMin: document.getElementById('guessMin'),
-      guessMax: document.getElementById('guessMax'), guessSeconds: document.getElementById('guessSeconds'),
-      guessStartBtn: document.getElementById('guessStartBtn'), guessCloseBtn: document.getElementById('guessCloseBtn'),
-      guessInfo: document.getElementById('guessInfo'), guessChart: document.getElementById('guessChart'),
-      guessScale: document.getElementById('guessScale'),
-
-      // Overlay question
-      quizQOverlay: document.getElementById('quizQOverlay'),
-      quizQText: document.getElementById('quizQText'), quizTimer: document.getElementById('quizTimer'),
-
-      // Trivia
-      triviaPanel: document.getElementById('triviaPanel'),
-      triviaLoadBtn: document.getElementById('triviaLoadBtn'),
-      triviaPickBtn: document.getElementById('triviaPickBtn'),
-      triviaStartBtn: document.getElementById('triviaStartBtn'),
-      triviaReviewNextBtn: document.getElementById('triviaReviewNextBtn'),
-      triviaResetBtn: document.getElementById('triviaResetBtn'),
-      triviaLoadedInfo: document.getElementById('triviaLoadedInfo'),
-      triviaStatus: document.getElementById('triviaStatus'),
-      triviaAnswers: document.getElementById('triviaAnswers'),
-      triviaCorrectWrap: document.getElementById('triviaCorrectWrap'),
-      triviaCorrect: document.getElementById('triviaCorrect')
+      // Stage
+      stage: byId('stage'),
+      stageGame: byId('stageGame'),
+      stageRoom: byId('stageRoom'),
+      stageQNum: byId('stageQNum'),
+      stageQuestion: byId('stageQuestion'),
+      stageTimer: byId('stageTimer'),
+      stageWinnerWrap: byId('stageWinnerWrap'),
+      stageWinner: byId('stageWinner'),
+      stageChartWrap: byId('stageChartWrap'),
+      stageChart: byId('stageChart'),
+      stageScale: byId('stageScale'),
+      stageAnswersWrap: byId('stageAnswersWrap'),
+      stageCorrectWrap: byId('stageCorrectWrap'),
+      stageCorrect: byId('stageCorrect'),
+      stageAnswers: byId('stageAnswers'),
+      stageSummaryWrap: byId('stageSummaryWrap'),
+      stageSummary: byId('stageSummary'),
+      stageMessage: byId('stageMessage'),
+      btnExitStage: byId('btnExitStage'),
+      btnReviewNext: byId('btnReviewNext')
     };
 
-    const socket = io();
-    let room = generateRoomCode(5);
-    let bankQuiz=[], bankGuess=[], bankTrivia=[], triviaRound=[];
-    let overlayTimer=null;
+    // Utils
+    function byId(id){ return document.getElementById(id); }
+    function generateRoomCode(len){ const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let out=''; for(let i=0;i<len;i++) out+=chars[Math.floor(Math.random()*chars.length)]; return out; }
+    function setText(el, txt){ el.textContent = txt ?? ''; }
+    function show(el, on=true){ el.classList.toggle('hidden', !on); }
+    function clearStageTimer(){ if(stageTimer){ clearInterval(stageTimer); stageTimer=null; } }
 
-    function buildJoinUrl(){ const base=els.baseUrl.value.trim().replace(/\/+$/,''); return base + '/join?room=' + encodeURIComponent(room); }
-    function renderInvite(){
-      els.roomCode.textContent = room;
-      const url = buildJoinUrl();
-      els.joinLink.href = url || '#';
-      els.joinLink.textContent = 'Ouvrir ' + (url||'');
-      const qrApi='https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=';
-      els.qr.src = url ? (qrApi + encodeURIComponent(url)) : '';
+    // Stage (mode jeu) helpers
+    function enterStage(gameLabel){
+      inGame = true;
+      setText(els.stageGame, gameLabel || 'Jeu');
+      setText(els.stageRoom, 'Salle ' + (room || ''));
+      // Nettoyage
+      setText(els.stageQNum,''); setText(els.stageQuestion,''); setText(els.stageTimer,'');
+      setText(els.stageWinner,''); setText(els.stageMessage,'');
+      els.stageSummary.innerHTML=''; els.stageAnswers.innerHTML=''; els.stageChart.innerHTML=''; setText(els.stageScale,'');
+      show(els.stageWinnerWrap,false); show(els.stageChartWrap,false);
+      show(els.stageAnswersWrap,false); show(els.stageCorrectWrap,false);
+      show(els.stageSummaryWrap,false); show(els.stageMessage,false);
+      clearStageTimer();
+      // UI
+      els.admin.classList.add('hidden');
+      els.stage.classList.remove('hidden');
     }
-    function renderPlayers(list){ els.players.innerHTML=''; (list||[]).forEach(p=>{ const li=document.createElement('li'); li.textContent=`${p.name} — ${p.score} pt${p.score>1?'s':''}${p.connected?' (en ligne)':''}`; els.players.appendChild(li); }); }
+    function exitStage(){
+      inGame = false;
+      clearStageTimer();
+      els.stage.classList.add('hidden');
+      els.admin.classList.remove('hidden');
+      // Désactiver contrôles trivia review
+      show(els.btnReviewNext,false);
+    }
+    function stageShowQuestion(q, numText){
+      setText(els.stageQuestion, q || '');
+      setText(els.stageQNum, numText || '');
+      show(els.stageWinnerWrap,false); show(els.stageChartWrap,false); show(els.stageAnswersWrap,false); show(els.stageSummaryWrap,false);
+    }
+    function stageSetTimer(seconds){
+      clearStageTimer();
+      let remain = seconds || 0;
+      setText(els.stageTimer, remain ? `${remain}s` : '');
+      if (remain>0){
+        stageTimer = setInterval(()=>{
+          remain--;
+          setText(els.stageTimer, remain>0 ? `${remain}s` : '');
+          if (remain<=0){ clearStageTimer(); }
+        },1000);
+      }
+    }
+    function stageShowWinner(name){
+      show(els.stageWinnerWrap,true);
+      setText(els.stageWinner, name || '');
+    }
+    function stageRenderChart(prog){
+      show(els.stageChartWrap,true);
+      els.stageChart.innerHTML='';
+      if(!prog || !Array.isArray(prog.bins)) return;
+      const maxC = Math.max(1, ...prog.bins.map(b=>b.count));
+      prog.bins.forEach(b=>{
+        const bar=document.createElement('div'); bar.className='bar';
+        const h=Math.round((b.count/maxC)*100); bar.style.height=(h||2)+'%'; bar.title=`${b.from}–${b.to}: ${b.count}`;
+        const lab=document.createElement('div'); lab.className='bar-label'; lab.textContent=b.count?b.count:'';
+        bar.appendChild(lab); els.stageChart.appendChild(bar);
+      });
+      els.stageScale.innerHTML = `<span>${prog.min}</span><span>${prog.max}</span>`;
+    }
+    function stageRenderAnswers(answers, correctText){
+      show(els.stageAnswersWrap,true);
+      setText(els.stageCorrect, correctText || '');
+      show(els.stageCorrectWrap, !!correctText);
+      els.stageAnswers.innerHTML='';
+      (answers||[]).forEach(({name,text,correct})=>{
+        const card=document.createElement('div');
+        card.className='answer-card'+(correct?' correct':'');
+        card.dataset.name=name;
+        card.innerHTML = `<div class="answer-name">${name}</div><div class="answer-text">${text||'<i>(vide)</i>'}</div>`;
+        card.addEventListener('click', ()=>{
+          const will = !card.classList.contains('correct');
+          // Envoyer marque (mode trivia review)
+          socket.emit('trivia:review_mark', { name, correct: will });
+        });
+        els.stageAnswers.appendChild(card);
+      });
+    }
+    function stageRenderSummary(scores){
+      show(els.stageSummaryWrap,true);
+      els.stageSummary.innerHTML = '';
+      (scores||[]).forEach((s,i)=>{
+        const li=document.createElement('li');
+        li.textContent = `${i+1}. ${s.name} — ${s.score} pt${s.score>1?'s':''}`;
+        els.stageSummary.appendChild(li);
+      });
+    }
+    function setStatus(t){ els.status.textContent = t || ''; }
+
+    // Admin area setup
+    window.addEventListener('DOMContentLoaded', ()=>{
+      // Salle
+      els.baseUrl.value = window.location.origin;
+      renderInvite();
+      socket.emit('tv:create_room', room);
+
+      // Mode radios
+      for(const r of els.modeRadios){
+        r.addEventListener('change', ()=>{ if(r.checked){ currentMode = r.value; socket.emit('mode:set', { mode: r.value }); }});
+      }
+
+      // Buzzer start
+      els.buzzerStart.addEventListener('click', ()=>{
+        currentMode='buzzer'; socket.emit('mode:set', { mode:'buzzer' });
+        enterStage('Buzzer');
+        stageShowQuestion('Préparez-vous...', '');
+        stageSetTimer(3); // visuel 3-2-1
+        // envoyer le countdown aux joueurs
+        socket.emit('countdown:start', 3);
+        setTimeout(()=> socket.emit('buzz:open'), 3000);
+      });
+
+      // Quiz banque
+      els.quizLoadBtn?.addEventListener('click', async()=>{
+        try{ const r=await fetch('/questions.json',{cache:'no-store'}); const d=await r.json();
+          if(!Array.isArray(d)) throw 0; bankQuiz=d; els.quizLoadedInfo.textContent=`${bankQuiz.length} question(s)`; els.quizRandomBtn.disabled = !bankQuiz.length;
+        }catch{ alert('Impossible de charger /questions.json'); }
+      });
+      els.quizRandomBtn?.addEventListener('click', ()=>{
+        if(!bankQuiz.length) return;
+        const it=bankQuiz[Math.floor(Math.random()*bankQuiz.length)];
+        els.quizQuestion.value=it.q||''; (it.a?els.quizTrue:els.quizFalse).checked=true;
+      });
+      els.quizStartBtn.addEventListener('click', ()=>{
+        const q=els.quizQuestion.value.trim(); if(!q) return alert('Entre une question');
+        const s=Math.max(1,Math.min(30,parseInt(els.quizSeconds.value||'5',10)));
+        currentMode='quiz'; socket.emit('mode:set', { mode:'quiz' });
+        enterStage('Quiz Vrai/Faux');
+        stageShowQuestion(q,''); stageSetTimer(s);
+        socket.emit('quiz:start', { question:q, correct: els.quizTrue.checked, seconds:s });
+        socket.emit('countdown:start', s);
+      });
+
+      // Guess banque
+      els.guessLoadBtn.addEventListener('click', async()=>{
+        try{ const r=await fetch('/guess-questions.json',{cache:'no-store'}); const d=await r.json();
+          if(!Array.isArray(d)) throw 0; bankGuess=d; els.guessLoadedInfo.textContent=`${bankGuess.length} question(s)`; els.guessRandomBtn.disabled = !bankGuess.length;
+        }catch{ alert('Impossible de charger /guess-questions.json'); }
+      });
+      els.guessRandomBtn.addEventListener('click', ()=>{
+        if(!bankGuess.length) return;
+        const it=bankGuess[Math.floor(Math.random()*bankGuess.length)];
+        els.guessQuestion.value=it.q||''; els.guessCorrect.value=it.c??''; els.guessMin.value=it.min??0; els.guessMax.value=it.max??100; els.guessSeconds.value=it.s??8;
+      });
+      els.guessStartBtn.addEventListener('click', ()=>{
+        const q=els.guessQuestion.value.trim(); if(!q) return alert('Entre une question');
+        const correct=parseInt(els.guessCorrect.value||'0',10);
+        const min=parseInt(els.guessMin.value||'0',10), max=parseInt(els.guessMax.value||'100',10);
+        const s=Math.max(1,Math.min(60,parseInt(els.guessSeconds.value||'8',10)));
+        currentMode='guess'; socket.emit('mode:set', { mode:'guess' });
+        enterStage('Devine le nombre');
+        stageShowQuestion(q,''); stageSetTimer(s);
+        socket.emit('guess:start', { question:q, correct, min, max, seconds:s });
+        socket.emit('countdown:start', s);
+      });
+
+      // Trivia banque
+      els.triviaLoadBtn.addEventListener('click', async()=>{
+        try{ const r=await fetch('/trivia-questions.json',{cache:'no-store'}); const d=await r.json();
+          if(!Array.isArray(d)) throw 0; bankTrivia=d; els.triviaLoadedInfo.textContent=`${bankTrivia.length} question(s)`; els.triviaPickBtn.disabled = !bankTrivia.length;
+        }catch{ alert('Impossible de charger /trivia-questions.json'); }
+      });
+      els.triviaPickBtn.addEventListener('click', ()=>{
+        if(!bankTrivia.length) return;
+        const arr=[...bankTrivia]; for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; }
+        triviaRound = arr.slice(0,20);
+        els.triviaStartBtn.disabled = !triviaRound.length;
+        els.triviaStatus.textContent = `Sélection: ${triviaRound.length} questions.`;
+      });
+      els.triviaStartBtn.addEventListener('click', ()=>{
+        if(!triviaRound.length) return alert('Choisis 20 questions');
+        currentMode='trivia'; socket.emit('mode:set', { mode:'trivia' });
+        enterStage('Culture générale');
+        socket.emit('trivia:setup', { items: triviaRound, seconds: 15 });
+        socket.emit('trivia:start');
+      });
+
+      // Actions globales
+      els.resetRoundBtn.addEventListener('click', ()=> socket.emit('round:reset'));
+      els.resetScoresBtn.addEventListener('click', ()=> socket.emit('scores:reset'));
+      els.btnExitStage.addEventListener('click', exitStage);
+      els.btnReviewNext.addEventListener('click', ()=> socket.emit('trivia:review_next'));
+
+      // Salle / lien
+      els.baseUrl.addEventListener('change', renderInvite);
+      els.regenBtn.addEventListener('click', ()=>{ room=generateRoomCode(5); renderInvite(); socket.emit('tv:create_room', room); });
+      els.copyCodeBtn.addEventListener('click', async()=>{ try{ await navigator.clipboard.writeText(room); alert('Code copié'); }catch{} });
+      els.copyLinkBtn.addEventListener('click', async()=>{ try{ await navigator.clipboard.writeText(buildJoinUrl()); alert('Lien copié'); }catch{} });
+    });
+
+    // Socket events
+    socket.on('room:players', renderPlayers);
+    socket.on('mode:changed', ({ mode })=>{
+      currentMode = mode;
+      // Ne PAS fermer la scène si on est en jeu
+      if (!inGame) setModeUI(mode);
+    });
+
+    // Buzzer
+    socket.on('round:open', ()=>{
+      if(!inGame) enterStage('Buzzer');
+      stageShowQuestion('BUZZ !!!','');
+      setText(els.stageTimer,''); // pas de chrono TV après l’ouverture
+    });
+    socket.on('round:winner', (d)=>{
+      stageShowWinner(d.name);
+    });
+    socket.on('round:reset', ()=>{
+      // si en jeu mais pas d’activité, on reste en scène; à toi d’appuyer “Quitter le mode jeu” si besoin
+      setStatus('Tour/Question réinitialisé.');
+    });
+
+    // Quiz
+    socket.on('quiz:question', ({ question, seconds })=>{
+      if(!inGame){ currentMode='quiz'; enterStage('Quiz Vrai/Faux'); }
+      stageShowQuestion(question, '');
+      stageSetTimer(seconds||5);
+    });
+    socket.on('quiz:result', ({ correct, countTrue, countFalse, total })=>{
+      setText(els.stageQuestion, `Bonne réponse: ${correct ? 'Vrai' : 'Faux'}`);
+      setText(els.stageTimer, `Vrai: ${countTrue}  |  Faux: ${countFalse}  |  Total: ${total}`);
+    });
+
+    // Guess
+    socket.on('guess:start', ({ question, min, max, seconds })=>{
+      if(!inGame){ currentMode='guess'; enterStage('Devine le nombre'); }
+      stageShowQuestion(question, '');
+      stageSetTimer(seconds||8);
+      // l’histogramme arrive via progress
+    });
+    socket.on('guess:progress', (prog)=> stageRenderChart(prog));
+    socket.on('guess:result', ({ correct, winners, bestDiff, tol })=>{
+      setText(els.stageQuestion, 'Réponse: ' + correct);
+      const n = winners?.length||0;
+      setText(els.stageTimer, n ? `Gagnants: ${winners.slice(0,5).join(', ')}${n>5?` (+${n-5})`:''}${bestDiff!=null?` — écart: ${bestDiff}${tol?`, tol≈±${tol}`:''}: ''}` : 'Aucun gagnant');
+    });
+
+    // Trivia — phase questions auto
+    socket.on('trivia:setup', ({ total, seconds })=>{
+      triviaSeconds = seconds||15;
+      setStatus(`Série prête: ${total} questions, ${triviaSeconds}s chacune.`);
+    });
+    socket.on('trivia:question', ({ index, total, question, seconds })=>{
+      if(!inGame){ currentMode='trivia'; enterStage('Culture générale'); }
+      stageShowQuestion(question, `Question ${index}/${total}`);
+      stageSetTimer(seconds || triviaSeconds);
+    });
+    socket.on('trivia:closed', ({ index })=>{
+      // la question suivante vient automatiquement
+    });
+
+    // Trivia — phase revue/correction
+    socket.on('trivia:review_start', ({ total })=>{
+      setText(els.stageMessage, 'Début de la correction'); show(els.stageMessage,true);
+      show(els.btnReviewNext,false);
+    });
+    socket.on('trivia:review', ({ index, total, question, correct, answers })=>{
+      show(els.stageMessage,false);
+      stageShowQuestion(question, `Correction ${index}/${total}`);
+      stageRenderAnswers(answers, correct);
+      show(els.btnReviewNext,true);
+    });
+    socket.on('trivia:marked', ({ name, correct })=>{
+      // Toggle visuel dans la grid
+      const cards = els.stageAnswers.querySelectorAll('.answer-card');
+      cards.forEach(c=>{ if(c.dataset.name===name) c.classList.toggle('correct', !!correct); });
+    });
+    socket.on('trivia:summary', ({ scores })=>{
+      stageShowQuestion('Classement (mini‑jeu):', '');
+      stageRenderSummary(scores);
+      show(els.btnReviewNext,false);
+    });
+
+    // Helpers UI
+    function renderPlayers(list){
+      els.players.innerHTML='';
+      (list||[]).forEach(p=>{
+        const li=document.createElement('li');
+        li.textContent = `${p.name} — ${p.score} pt${p.score>1?'s':''}${p.connected?' (en ligne)':''}`;
+        els.players.appendChild(li);
+      });
+    }
     function setModeUI(mode){
       els.buzzerPanel.style.display = (mode==='buzzer')?'':'none';
       els.quizPanel.style.display   = (mode==='quiz')?'':'none';
@@ -265,134 +567,14 @@
       els.triviaPanel.style.display = (mode==='trivia')?'':'none';
       for(const r of els.modeRadios) r.checked=(r.value===mode);
     }
-    function showQuestionOverlay(q, seconds){
-      if(overlayTimer){ clearInterval(overlayTimer); overlayTimer=null; }
-      els.quizQText.textContent=q;
-      let remain=seconds||15;
-      els.quizTimer.textContent = `Temps restant: ${remain}s`;
-      els.quizQOverlay.classList.add('show');
-      // informer les joueurs pour afficher le chrono texte
-      socket.emit('countdown:start', remain);
-      overlayTimer = setInterval(()=>{ remain--; if(remain>0){ els.quizTimer.textContent=`Temps restant: ${remain}s`; } else { clearInterval(overlayTimer); overlayTimer=null; } }, 1000);
+    function buildJoinUrl(){ const base=els.baseUrl.value.trim().replace(/\/+$/,''); return base + '/join?room=' + encodeURIComponent(room); }
+    function renderInvite(){
+      els.roomCode.textContent = room;
+      const url = buildJoinUrl();
+      els.joinLink.href = url || '#';
+      els.joinLink.textContent = 'Ouvrir ' + (url||'');
+      els.qr.src = url ? 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data='+encodeURIComponent(url) : '';
     }
-    function hideQuestionOverlay(){ if(overlayTimer){clearInterval(overlayTimer); overlayTimer=null;} els.quizQOverlay.classList.remove('show'); els.quizTimer.textContent=''; }
-
-    window.addEventListener('DOMContentLoaded', () => {
-      els.baseUrl.value = window.location.origin; renderInvite(); socket.emit('tv:create_room', room);
-
-      // Mode radios
-      for(const r of els.modeRadios){ r.addEventListener('change', ()=>{ if(r.checked) socket.emit('mode:set', { mode: r.value }); }); }
-
-      // Commun
-      socket.on('mode:changed', ({mode})=>{ setModeUI(mode); els.overlay.classList.remove('show'); hideQuestionOverlay(); els.triviaAnswers.innerHTML=''; els.triviaCorrectWrap.style.display='none'; els.triviaStatus.textContent=''; });
-      socket.on('room:players', renderPlayers);
-      socket.on('scores:reset', ()=>{ /* hint */ });
-      socket.on('round:reset', ()=>{ hideQuestionOverlay(); /* reset UI */ });
-
-      // Buzzer
-      socket.on('round:winner', (d)=>{ els.winnerName.textContent=d.name; els.overlay.classList.add('show'); });
-
-      // Quiz
-      els.quizLoadBtn?.addEventListener('click', async()=>{ try{ const r=await fetch('/questions.json',{cache:'no-store'}); const d=await r.json(); if(!Array.isArray(d)) throw 0; bankQuiz=d; els.quizLoadedInfo.textContent=`${bankQuiz.length} question(s)`; els.quizRandomBtn.disabled=!bankQuiz.length; }catch{ alert('Impossible de charger /questions.json'); } });
-      els.quizRandomBtn?.addEventListener('click', ()=>{ if(!bankQuiz.length) return; const it=bankQuiz[Math.floor(Math.random()*bankQuiz.length)]; els.quizQuestion.value=it.q||''; (it.a?els.quizTrue:els.quizFalse).checked=true; });
-      els.quizStartBtn.addEventListener('click', ()=>{ const q=els.quizQuestion.value.trim(); if(!q) return alert('Entre une question'); const s=Math.max(1,Math.min(30,parseInt(els.quizSeconds.value||'5',10))); socket.emit('quiz:start', { question:q, correct: els.quizTrue.checked, seconds:s }); showQuestionOverlay(q, s); setTimeout(()=> socket.emit('quiz:close'), s*1000); });
-      socket.on('quiz:result', ({correct,countTrue,countFalse,total})=>{ hideQuestionOverlay(); els.quizInfo.textContent=`Bonne reponse: ${correct?'Vrai':'Faux'} — Vrai: ${countTrue}, Faux: ${countFalse}, Total: ${total}`; });
-      els.quizCloseBtn.addEventListener('click', ()=> socket.emit('quiz:close'));
-
-      // Guess
-      els.guessLoadBtn.addEventListener('click', async()=>{ try{ const r=await fetch('/guess-questions.json',{cache:'no-store'}); const d=await r.json(); if(!Array.isArray(d)) throw 0; bankGuess=d; els.guessLoadedInfo.textContent=`${bankGuess.length} question(s)`; els.guessRandomBtn.disabled=!bankGuess.length; }catch{ alert('Impossible de charger /guess-questions.json'); } });
-      els.guessRandomBtn.addEventListener('click', ()=>{ if(!bankGuess.length) return; const it=bankGuess[Math.floor(Math.random()*bankGuess.length)]; els.guessQuestion.value=it.q||''; els.guessCorrect.value=it.c??''; els.guessMin.value=it.min??0; els.guessMax.value=it.max??100; els.guessSeconds.value=it.s??8; });
-      els.guessStartBtn.addEventListener('click', ()=>{ const q=els.guessQuestion.value.trim(); if(!q) return alert('Entre une question'); const s=Math.max(1,Math.min(60,parseInt(els.guessSeconds.value||'8',10))); socket.emit('guess:start',{question:q,correct:parseInt(els.guessCorrect.value||'0',10),min:parseInt(els.guessMin.value||'0',10),max:parseInt(els.guessMax.value||'100',10),seconds:s}); showQuestionOverlay(q, s); socket.emit('countdown:start', s); setTimeout(()=> socket.emit('guess:close'), s*1000); });
-      socket.on('guess:result', ({correct})=>{ hideQuestionOverlay(); els.guessInfo.textContent=`Réponse: ${correct}`; });
-
-      // Trivia — Culture générale
-      els.triviaLoadBtn.addEventListener('click', async()=>{
-        try{ const r=await fetch('/trivia-questions.json',{cache:'no-store'}); const d=await r.json(); if(!Array.isArray(d)) throw 0; bankTrivia=d; els.triviaLoadedInfo.textContent=`${bankTrivia.length} question(s)`; els.triviaPickBtn.disabled=!bankTrivia.length; }
-        catch{ alert('Impossible de charger /trivia-questions.json'); }
-      });
-      els.triviaPickBtn.addEventListener('click', ()=>{
-        if(!bankTrivia.length) return;
-        const arr=[...bankTrivia];
-        for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; }
-        triviaRound = arr.slice(0,20);
-        els.triviaStartBtn.disabled = !triviaRound.length;
-        els.triviaStatus.textContent = `Selection: ${triviaRound.length} question(s).`;
-      });
-      els.triviaStartBtn.addEventListener('click', ()=>{
-        if(!triviaRound.length) return alert('Choisis 20 questions');
-        socket.emit('mode:set', { mode: 'trivia' });
-        socket.emit('trivia:setup', { items: triviaRound, seconds: 15 });
-        socket.emit('trivia:start');
-        els.triviaReviewNextBtn.disabled = true; // activé après la phase questions
-      });
-      els.triviaReviewNextBtn.addEventListener('click', ()=>{
-        socket.emit('trivia:review_next');
-        els.triviaReviewNextBtn.disabled = true; // réactivé quand la question suivante arrive
-      });
-      els.triviaResetBtn.addEventListener('click', ()=>{
-        triviaRound=[]; els.triviaStartBtn.disabled=true; els.triviaReviewNextBtn.disabled=true;
-        els.triviaAnswers.innerHTML=''; els.triviaCorrectWrap.style.display='none'; els.triviaStatus.textContent='Serie reinitialisee.';
-        socket.emit('round:reset');
-      });
-
-      // Phase questions (automatique)
-      socket.on('trivia:setup', ({ total, seconds })=>{
-        els.triviaStatus.textContent = `Serie prete: ${total} questions, ${seconds}s chacune.`;
-      });
-      socket.on('trivia:question', ({ index, total, question, seconds })=>{
-        setModeUI('trivia');
-        els.triviaStatus.textContent = `Question ${index}/${total}`;
-        els.triviaAnswers.innerHTML = '';
-        els.triviaCorrectWrap.style.display='none';
-        showQuestionOverlay(question, seconds || 15);
-        // pas de close côté TV: le serveur enchaîne
-      });
-      socket.on('trivia:closed', ({ index })=>{
-        hideQuestionOverlay();
-        els.triviaStatus.textContent = `Question ${index} terminee...`;
-      });
-
-      // Phase revue
-      socket.on('trivia:review_start', ({ total })=>{
-        els.triviaStatus.textContent = `Correction — 1/${total}`;
-      });
-      socket.on('trivia:review', ({ index, total, question, correct, answers })=>{
-        hideQuestionOverlay();
-        els.triviaStatus.textContent = `Correction — ${index}/${total}`;
-        els.triviaCorrectWrap.style.display='';
-        els.triviaCorrect.textContent = String(correct ?? '');
-        els.triviaAnswers.innerHTML = '';
-        (answers || []).forEach(({ name, text, correct })=>{
-          const card=document.createElement('div');
-          card.className='answer-card' + (correct ? ' correct' : '');
-          card.dataset.name=name;
-          card.innerHTML = `<div class="answer-name">${name}</div><div class="answer-text">${text || '<i>(vide)</i>'}</div>`;
-          card.addEventListener('click', ()=>{
-            const willBe = !card.classList.contains('correct');
-            socket.emit('trivia:review_mark', { name, correct: willBe });
-          });
-          els.triviaAnswers.appendChild(card);
-        });
-        // activer "suivante" pour laisser le temps de corriger
-        els.triviaReviewNextBtn.disabled = false;
-        // afficher la question en overlay si tu veux: showQuestionOverlay(question, 0);
-      });
-      socket.on('trivia:marked', ({ name, correct })=>{
-        const cards = els.triviaAnswers.querySelectorAll('.answer-card');
-        cards.forEach(c => { if (c.dataset.name === name) c.classList.toggle('correct', !!correct); });
-      });
-      socket.on('trivia:summary', ({ scores })=>{
-        const lines=(scores||[]).map((s,i)=>`${i+1}. ${s.name} — ${s.score} pt${s.score>1?'s':''}`);
-        els.triviaStatus.textContent = 'Classement (mini-jeu): ' + (lines.join(' | ') || 'Aucun');
-        els.triviaReviewNextBtn.disabled = true;
-      });
-
-      // Salle / Invite
-      els.regenBtn.addEventListener('click', ()=>{ room=generateRoomCode(5); renderInvite(); socket.emit('tv:create_room', room); });
-      els.baseUrl.addEventListener('change', renderInvite);
-      els.copyCodeBtn.addEventListener('click', async()=>{ try{ await navigator.clipboard.writeText(room); alert('Code copie'); }catch{} });
-      els.copyLinkBtn.addEventListener('click', async()=>{ try{ await navigator.clipboard.writeText(buildJoinUrl()); alert('Lien copie'); }catch{} });
-    });
   </script>
 </body>
 </html>

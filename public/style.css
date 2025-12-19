@@ -294,3 +294,49 @@ input[type="range"]::-moz-range-thumb {
   word-wrap: break-word;
   font-weight: 700;
 }
+
+/* MODE JEU (STAGE) PLEIN ECRAN */
+.hidden { display: none !important; }
+
+.stage {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  background:
+    radial-gradient(1200px 600px at -10% 110%, rgba(0,229,255,0.18), transparent 60%),
+    radial-gradient(1200px 700px at 110% -10%, rgba(255,61,129,0.22), transparent 60%),
+    linear-gradient(135deg, #101433, #1b2050 60%, #101433);
+  color: #fff;
+}
+.stage-inner { display: grid; grid-template-rows: auto 1fr auto; width: min(1200px, 96vw); padding: 20px; }
+.stage-top { display: flex; gap: 12px; align-items: center; }
+.stage-tag {
+  background: linear-gradient(180deg, #ffd94d, #ffb300);
+  color: #111; font-weight: 900; padding: .5rem .9rem; border-radius: 12px; box-shadow: 0 6px 0 #c98600;
+}
+.stage-tag.secondary { background: linear-gradient(180deg, #62f3ff, #00e5ff); box-shadow: 0 6px 0 #0aa2b0; }
+.stage-spacer { flex: 1; }
+
+.stage-center { display: grid; place-items: center; gap: 1rem; text-align: center; padding: 10px; }
+.stage-qnum { font-weight: 900; font-size: clamp(1.1rem, 2.4vw, 1.6rem); opacity: .9; }
+.stage-question { font-family: 'Luckiest Guy', cursive; font-size: clamp(1.6rem, 5.4vw, 3.2rem); text-shadow: 0 10px 0 rgba(0,0,0,.35), 0 0 28px rgba(255,212,0,.35); }
+.stage-timer { font-size: clamp(1.2rem, 3vw, 2rem); opacity: .9; }
+
+.stage-label { font-weight: 800; opacity: .9; margin-top: .4rem; }
+.stage-winner { font-family: 'Luckiest Guy', cursive; font-size: clamp(2.4rem, 9vw, 6rem); text-shadow: 0 10px 0 rgba(0,0,0,.35); }
+
+.stage-controls { display: flex; gap: .6rem; justify-content: flex-end; }
+.stage-summary { list-style: none; padding: 0; margin: .6rem 0 0 0; display: grid; gap: .35rem; font-weight: 800; }
+
+.answers-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: .8rem; width: 100%; }
+.answer-card { background: rgba(255,255,255,.1); border: 2px solid rgba(255,255,255,.18); border-radius: 14px; padding: .7rem .8rem; box-shadow: 0 4px 0 rgba(0,0,0,.25); cursor: pointer; }
+.answer-card.correct { background: linear-gradient(180deg, #78ff9a, #00e676); border-color: #00e676; color: #102b14; }
+.answer-name { font-weight: 900; margin-bottom: .35rem; }
+.answer-text { word-wrap: break-word; font-weight: 700; }
+
+.stage-message { font-size: 1.2rem; opacity: .9; }
+
+/* Chart dans la scène (réutilise .chart/.bar existants) */
