@@ -207,37 +207,46 @@ io.on('connection', (socket) => {
   });
 
   // TRIVIA (Culture generale)
-  socket.on('trivia:setup', ({ items, seconds }) => {
-    if (role !== 'tv' || !roomCode) return;
-    let r = getRoom(roomCode); if (r.gameId!=='trivia') r = ensureGame(roomCode, 'trivia');
-    games.trivia.adminSetup(io, r, roomCode, { items, seconds });
-  });
-  socket.on('trivia:start', () => {
-    if (role !== 'tv' || !roomCode) return;
-    const r = getRoom(roomCode); if (r.gameId!=='trivia') return;
-    games.trivia.adminStart(io, r, roomCode);
-  });
-  socket.on('trivia:next', () => {
-    if (role !== 'tv' || !roomCode) return;
-    const r = getRoom(roomCode); if (r.gameId!=='trivia') return;
-    games.trivia.adminNext(io, r, roomCode, broadcastPlayers);
-  });
-  socket.on('trivia:close', () => {
-    if (role !== 'tv' || !roomCode) return;
-    const r = getRoom(roomCode); if (r.gameId!=='trivia') return;
-    games.trivia.adminClose(io, r, roomCode);
-  });
-  socket.on('trivia:mark', ({ name, correct }) => {
-    if (role !== 'tv' || !roomCode) return;
-    const r = getRoom(roomCode); if (r.gameId!=='trivia') return;
-    games.trivia.adminMark(io, r, roomCode, String(name||''), !!correct, broadcastPlayers);
-  });
-  socket.on('trivia:answer', ({ text }, ack) => {
-    if (!roomCode) { ack&&ack({ok:false}); return; }
-    const r = getRoom(roomCode); if (r.gameId!=='trivia') { ack&&ack({ok:false}); return; }
-    games.trivia.playerAnswer(io, r, roomCode, (playerName||'Joueur'), String(text||''));
-    ack && ack({ ok: true });
-  });
+socket.on('trivia:setup', ({ items, seconds }) => {
+  if (role !== 'tv' || !roomCode) return;
+  let r = getRoom(roomCode);
+  if (r.gameId !== 'trivia') r = ensureGame(roomCode, 'trivia');
+  games.trivia.adminSetup(io, r, roomCode, { items, seconds });
+});
+
+socket.on('trivia:start', () => {
+  if (role !== 'tv' || !roomCode) return;
+  const r = getRoom(roomCode);
+  if (r.gameId !== 'trivia') return;
+  games.trivia.adminStart(io, r, roomCode);
+});
+
+// Phase "ask": le serveur enchaîne; pas de 'close'/'next' émis par la TV
+
+// Phase "review" (après les 20 questions)
+socket.on('trivia:review_mark', ({ name, correct }) => {
+  if (role !== 'tv' || !roomCode) return;
+  const r = getRoom(roomCode);
+  if (r.gameId !== 'trivia') return;
+  games.trivia.reviewMark(io, r, roomCode, name, !!correct);
+});
+
+socket.on('trivia:review_next', () => {
+  if (role !== 'tv' || !roomCode) return;
+  const r = getRoom(roomCode);
+  if (r.gameId !== 'trivia') return;
+  games.trivia.reviewNext(io, r, roomCode);
+});
+
+// Réponse joueur (texte libre, dernière valeur retenue)
+socket.on('trivia:answer', ({ text }, ack) => {
+  if (!roomCode) { ack && ack({ ok: false }); return; }
+  const r = getRoom(roomCode);
+  if (r.gameId !== 'trivia') { ack && ack({ ok: false }); return; }
+  games.trivia.playerAnswer(io, r, roomCode, (playerName || 'Joueur'), String(text || ''));
+  ack && ack({ ok: true });
+});
+
 
   socket.on('disconnect', () => {
     if (!roomCode) return;
