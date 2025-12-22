@@ -54,6 +54,13 @@
     <!-- Buzzer -->
     <section id="buzzerPanel" class="card">
       <h2>Buzzer</h2>
+	  <div class="row">
+        <label><input type="checkbox" id="buzzerAutoplay" /> Auto‑play</label>
+        <small class="hint" style="margin-left:.5rem;">Enchaîne: 3‑2‑1, ouvre le tour, montre le gagnant, relance.</small>
+      </div>
+
+	  
+	  
       <div class="row">
         <button id="startRoundBtn">Demarrer le tour</button>
         <button id="resetRoundBtn">Reinitialiser le tour</button>
@@ -65,6 +72,10 @@
     <!-- Quiz -->
     <section id="quizPanel" class="card" style="display:none;">
       <h2>Quiz Vrai/Faux</h2>
+		<div class="row">
+        <label><input type="checkbox" id="quizAutoplay" /> Auto‑play</label>
+        <small class="hint" style="margin-left:.5rem;">Pioche/pose/corrige puis relance automatiquement.</small>
+		</div>
 
       <div class="card" style="background:#fafafa;">
         <h3 style="margin-top:0;">Banque de questions (facultatif)</h3>
@@ -97,6 +108,10 @@
     <!-- Devine le nombre -->
     <section id="guessPanel" class="card" style="display:none;">
       <h2>Devine le nombre</h2>
+	  <div class="row">
+        <label><input type="checkbox" id="guessAutoplay" /> Auto‑play</label>
+        <small class="hint" style="margin-left:.5rem;">Pose/corrige puis relance automatiquement.</small>
+      </div>
 
       <div class="card" style="background:#fafafa;">
         <h3 style="margin-top:0;">Banque (facultatif)</h3>
@@ -151,15 +166,16 @@
   </main>
 
   <!-- Overlays -->
-  <div id="overlay" class="overlay" onclick="this.classList.remove('show')">
+  <div id="overlay" class="overlay">
+    <button class="overlay-close" id="overlayClose" title="Fermer">×</button>
     <div>
       <div class="label">Gagnant</div>
       <div id="winnerName" class="winner"></div>
-      <div class="hint">(cliquer pour fermer)</div>
     </div>
   </div>
 
   <div id="countdown" class="overlay">
+    <button class="overlay-close" id="countdownClose" title="Fermer">×</button>
     <div>
       <div class="label">Debut dans</div>
       <div id="countNum" class="winner"></div>
@@ -167,12 +183,14 @@
   </div>
 
   <div id="quizQOverlay" class="overlay">
+    <button class="overlay-close" id="quizCloseOverlay" title="Fermer">×</button>
     <div>
       <div class="label">Question</div>
       <div id="quizQText" class="question"></div>
       <div id="quizTimer" class="hint" style="margin-top:.8rem;"></div>
     </div>
   </div>
+
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
@@ -249,19 +267,43 @@
       guessInfo: document.getElementById('guessInfo'),
       guessChart: document.getElementById('guessChart'),
       guessScale: document.getElementById('guessScale'),
+	        ,
+      // Autoplay toggles
+      buzzerAutoplay: document.getElementById('buzzerAutoplay'),
+      quizAutoplay: document.getElementById('quizAutoplay'),
+      guessAutoplay: document.getElementById('guessAutoplay')
+
 
       // Overlay question
       quizQOverlay: document.getElementById('quizQOverlay'),
       quizQText: document.getElementById('quizQText'),
       quizTimer: document.getElementById('quizTimer')
+	        ,
+      // Overlay close buttons
+      overlayClose: document.getElementById('overlayClose'),
+      countdownClose: document.getElementById('countdownClose'),
+      quizCloseOverlay: document.getElementById('quizCloseOverlay')
+
     };
 
     const socket = io();
     let room = generateRoomCode(5);
 
     // Timers
-    let cdTimer = null;
-    let quizTimer = null;
+	let cdTimer = null;
+	let quizTimer = null;
+
+	// Auto-play
+	let autoplayTimers = [];
+	function clearAutoplay() {
+	  autoplayTimers.forEach(t => clearTimeout(t));
+	  autoplayTimers = [];
+	}
+	function schedule(fn, ms) {
+	  const t = setTimeout(fn, ms);
+	  autoplayTimers.push(t);
+	  return t;
+	}
 
     // Banques
     let questionBankQuiz = [];
@@ -363,6 +405,7 @@
       // Commun
       socket.on('mode:changed', ({ mode }) => {
         setModeUI(mode);
+        clearAutoplay();
         els.overlay.classList.remove('show');
         stopCountdownUI();
         hideQuestionOverlay();
@@ -373,15 +416,84 @@
       });
       socket.on('room:players', renderPlayers);
       socket.on('scores:reset', () => setStatus('Scores reinitialises'));
-      socket.on('round:reset', () => { els.overlay.classList.remove('show'); stopCountdownUI(); hideQuestionOverlay(); setStatus('Tour/Question reinitialise.'); });
+      
+	  
+		socket.on('round:reset', () => {
+		  els.overlay.classList.remove('show');
+		  stopCountdownUI();
+		  hideQuestionOverlay();
+		  setStatus('Tour/Question reinitialise.');
+
+		  // Nettoyage Auto‑play
+		  clearAutoplay();
+		});
 
       // Buzzer
       socket.on('round:open', () => { els.overlay.classList.remove('show'); setStatus('Tour ouvert: le plus rapide gagne !'); });
       socket.on('round:winner', (data) => { setStatus(`Gagnant: ${data.name} (+1)`); els.winnerName.textContent = data.name; els.overlay.classList.add('show'); playBeep(1200, 200); });
 
+		if (els.buzzerAutoplay.checked) {
+	  // Relance après une courte pause d’affichage
+	  schedule(() => startCountdown(3, () => socket.emit('buzz:open')), 1200);
+        }
+
+
       // Quiz
       socket.on('quiz:question', ({ question, seconds }) => { setModeUI('quiz'); els.quizInfo.textContent = `Question en cours (${seconds}s): "${question}"`; showQuestionOverlay(question, seconds); });
-      socket.on('quiz:result', ({ correct, countTrue, countFalse, total }) => { hideQuestionOverlay(); const txt = correct ? 'Vrai' : 'Faux'; els.quizInfo.textContent = `Bonne reponse: ${txt} — Vrai: ${countTrue}, Faux: ${countFalse}, Total: ${total}`; });
+      
+	socket.on('quiz:result', ({ correct, countTrue, countFalse, total }) => {
+	  hideQuestionOverlay();
+	  const txt = correct ? 'Vrai' : 'Faux';
+	  els.quizInfo.textContent =
+		`Bonne reponse: ${txt} — Vrai: ${countTrue}, Faux: ${countFalse}, Total: ${total}`;
+
+	  // Auto-play : relance automatique
+	  if (els.quizAutoplay.checked) {
+		// Petite pause de 1.2s puis relance une question
+		schedule(() => {
+		  // Si une banque est chargée, tirer au hasard, sinon réutiliser la question courante
+		  let q = els.quizQuestion.value.trim();
+		  let c = els.quizTrue.checked;
+
+		  if (questionBankQuiz.length) {
+			const item = questionBankQuiz[
+			  Math.floor(Math.random() * questionBankQuiz.length)
+			];
+			q = item.q || q;
+			c = !!item.a;
+			els.quizQuestion.value = q;
+			if (c) els.quizTrue.checked = true;
+			else els.quizFalse.checked = true;
+		  }
+
+		  const s = Math.max(
+			1,
+			Math.min(30, parseInt(els.quizSeconds.value || '5', 10))
+		  );
+
+		  socket.emit('quiz:start', { question: q, correct: c, seconds: s });
+		  socket.emit('countdown:start', s);
+		  schedule(() => socket.emit('quiz:close'), s * 1000);
+		}, 1200);
+	  }
+	});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
       // Guess
       socket.on('guess:start', ({ question, min, max, seconds }) => {
@@ -394,16 +506,55 @@
       socket.on('guess:progress', (prog) => {
         renderGuessChart(prog);
       });
-      socket.on('guess:result', ({ correct, winners, bestDiff, tol }) => {
-        hideQuestionOverlay();
-        const maxShow = 5;
-        const names = winners || [];
-        const shown = names.slice(0, maxShow).join(', ');
-        const more = names.length > maxShow ? ` (+${names.length - maxShow})` : '';
-        const who = names.length ? shown + more : 'Aucun';
-        const detail = (bestDiff === null) ? '' : ` — meilleur écart: ${bestDiff}${tol ? `, tolérance≈±${tol}` : ''}`;
-        els.guessInfo.textContent = `Réponse: ${correct} — Gagnants: ${who}${detail}`;
-      });
+		
+	socket.on('guess:result', ({ correct, winners, bestDiff, tol }) => {
+	  hideQuestionOverlay();
+	  
+	  const maxShow = 5;
+	  const names = winners || [];
+	  const shown = names.slice(0, maxShow).join(', ');
+	  const more = names.length > maxShow ? ` (+${names.length - maxShow})` : '';
+	  const who = names.length ? shown + more : 'Aucun';
+	  const detail = (bestDiff === null)
+		? ''
+		: ` — meilleur écart: ${bestDiff}${tol ? `, tolérance≈±${tol}` : ''}`;
+	  
+	  els.guessInfo.textContent = `Réponse: ${correct} — Gagnants: ${who}${detail}`;
+
+	  // Auto-play : relance automatique si activé
+	  if (els.guessAutoplay.checked) {
+		schedule(() => {
+		  // Si une banque existe, on repioche; sinon on relance la même question
+		  let q = els.guessQuestion.value.trim();
+		  let c = parseInt(els.guessCorrect.value || '0', 10);
+		  let min = parseInt(els.guessMin.value || '0', 10);
+		  let max = parseInt(els.guessMax.value || '100', 10);
+		  let s = Math.max(1, Math.min(60, parseInt(els.guessSeconds.value || '8', 10)));
+
+		  if (questionBankGuess.length) {
+			const item = questionBankGuess[
+			  Math.floor(Math.random() * questionBankGuess.length)
+			];
+			q = item.q || q;
+			c = item.c ?? c;
+			min = item.min ?? min;
+			max = item.max ?? max;
+			s = item.s ?? s;
+
+			els.guessQuestion.value = q;
+			els.guessCorrect.value = c;
+			els.guessMin.value = min;
+			els.guessMax.value = max;
+			els.guessSeconds.value = s;
+		  }
+
+		  socket.emit('guess:start', { question: q, correct: c, min, max, seconds: s });
+		  socket.emit('countdown:start', s);
+		  schedule(() => socket.emit('guess:close'), s * 1000);
+		}, 1200);
+	  }
+	});
+
 
       // Salle
       els.regenBtn.addEventListener('click', () => { room = generateRoomCode(5); renderInvite(); socket.emit('tv:create_room', room); });
@@ -413,7 +564,7 @@
 
       // Buzzer actions
       els.startRoundBtn.addEventListener('click', () => startCountdown(3, () => socket.emit('buzz:open')));
-      els.resetRoundBtn.addEventListener('click', () => socket.emit('round:reset'));
+	  els.resetRoundBtn.addEventListener('click', () => { clearAutoplay(); socket.emit('round:reset'); });
       els.resetScoresBtn.addEventListener('click', () => socket.emit('scores:reset'));
 
       // Banque quiz
@@ -435,14 +586,15 @@
       });
 
       // Quiz actions
-      els.quizStartBtn.addEventListener('click', () => {
-        const q = els.quizQuestion.value.trim();
+		els.quizStartBtn.addEventListener('click', () => {
+		clearAutoplay();        
+		const q = els.quizQuestion.value.trim();
         const correct = els.quizTrue.checked;
         const seconds = Math.max(1, Math.min(30, parseInt(els.quizSeconds.value || '5', 10)));
         if (!q) { alert('Entre une question'); return; }
         socket.emit('quiz:start', { question: q, correct, seconds });
         socket.emit('countdown:start', seconds);
-        setTimeout(() => socket.emit('quiz:close'), seconds * 1000);
+        schedule(() => socket.emit('quiz:close'), seconds * 1000);
       });
       els.quizCloseBtn.addEventListener('click', () => socket.emit('quiz:close'));
 
@@ -468,7 +620,8 @@
       });
 
       // Guess actions
-      els.guessStartBtn.addEventListener('click', () => {
+		els.guessStartBtn.addEventListener('click', () => {
+		clearAutoplay();
         const q = els.guessQuestion.value.trim();
         if (!q) { alert('Entre une question'); return; }
         const correct = parseInt(els.guessCorrect.value || '0', 10);
@@ -477,10 +630,19 @@
         const seconds = Math.max(1, Math.min(60, parseInt(els.guessSeconds.value || '8', 10)));
         socket.emit('guess:start', { question: q, correct, min, max, seconds });
         socket.emit('countdown:start', seconds);
-        setTimeout(() => socket.emit('guess:close'), seconds * 1000);
+        schedule(() => socket.emit('guess:close'), seconds * 1000);
       });
       els.guessCloseBtn.addEventListener('click', () => socket.emit('guess:close'));
-    });
+    
+	        // Fermeture overlays: arrête le mode en cours (reset round/question)
+      els.overlayClose.addEventListener('click', (e) => { e.stopPropagation(); els.overlay.classList.remove('show'); socket.emit('round:reset'); });
+      els.countdownClose.addEventListener('click', (e) => { e.stopPropagation(); stopCountdownUI(); socket.emit('round:reset'); });
+      els.quizCloseOverlay.addEventListener('click', (e) => { e.stopPropagation(); hideQuestionOverlay(); socket.emit('round:reset'); });
+
+	
+	
+		
+	});
   </script>
 </body>
 </html>

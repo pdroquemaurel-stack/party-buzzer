@@ -64,7 +64,15 @@
   <script>
     const qs = new URLSearchParams(window.location.search);
     const roomParam = (qs.get('room') || '').toUpperCase();
+		
+	// Prefill depuis localStorage si pas de param dans l'URL
+    try {
+      const saved = JSON.parse(localStorage.getItem('pb:join') || '{}');
+      if (!roomParam && saved.room) elRoom.value = (saved.room || '').toUpperCase();
+      if (saved.pseudo) elPseudo.value = saved.pseudo;
+    } catch {}
 
+	
     // Form
     const elRoom = document.getElementById('room');
     const elPseudo = document.getElementById('pseudo');
@@ -136,7 +144,9 @@
     });
 
     elJoinBtn.addEventListener('click', () => {
-      const room = elRoom.value.trim().toUpperCase();
+	// Mémoriser les saisies
+      try { localStorage.setItem('pb:join', JSON.stringify({ room, pseudo })); } catch {}
+	  const room = elRoom.value.trim().toUpperCase();
       const pseudo = elPseudo.value.trim();
       if (!room || !pseudo) { alert('Merci de remplir la salle et le pseudo'); return; }
 
@@ -239,6 +249,19 @@
     elBuzz.addEventListener('click', () => { if (!socket) return; setBuzzEnabled(false); socket.emit('buzz:press', () => {}); });
     elBtnTrue.addEventListener('click', () => { if (!socket) return; setQuizEnabled(false); quizAnswered = true; elQuizInfo.textContent = 'Reponse envoyee: Vrai'; socket.emit('quiz:answer', { answer: true }, () => {}); });
     elBtnFalse.addEventListener('click', () => { if (!socket) return; setQuizEnabled(false); quizAnswered = false; elQuizInfo.textContent = 'Reponse envoyee: Faux'; socket.emit('quiz:answer', { answer: false }, () => {}); });
+  
+      // Auto-join si room & pseudo pré-remplis (optionnel, non bloquant)
+    window.addEventListener('DOMContentLoaded', () => {
+      const r = elRoom.value.trim().toUpperCase();
+      const p = elPseudo.value.trim();
+      if (r && p && !socket) {
+        // Ne pas auto-join si l’utilisateur veut changer: on attend un court délai
+        setTimeout(() => {
+          if (!socket && elForm.style.display !== 'none') elJoinBtn.click();
+        }, 500);
+      }
+    });
+  
   </script>
 </body>
 </html>
