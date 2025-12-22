@@ -94,23 +94,68 @@ export const Core = (() => {
     els.qr.src = qrApi + encodeURIComponent(joinUrl);
   }
 
-  function renderPlayers(list) {
+    function renderPlayers(list) {
     els.players.innerHTML = '';
-    (list || []).forEach(p => {
+    const medals = ['🥇', '🥈', '🥉'];
+
+    (list || []).forEach((p, idx) => {
       const li = document.createElement('li');
       li.className = 'score-item';
-      const name = document.createElement('div'); name.className = 'score-name'; name.textContent = p.name;
-      const score = document.createElement('div'); score.className = 'score-value'; score.textContent = p.score;
-      const controls = document.createElement('div'); controls.className = 'score-controls';
-      const btnPlus = document.createElement('button'); btnPlus.className = 'score-btn plus'; btnPlus.textContent = '▲';
-      btnPlus.addEventListener('click', () => { score.textContent = String((parseInt(score.textContent||'0',10)||0)+1); socket.emit('scores:adjust', { name: p.name, delta: +1 }); });
-      const btnMinus = document.createElement('button'); btnMinus.className = 'score-btn minus'; btnMinus.textContent = '▼';
-      btnMinus.addEventListener('click', () => { score.textContent = String((parseInt(score.textContent||'0',10)||0)-1); socket.emit('scores:adjust', { name: p.name, delta: -1 }); });
-      controls.appendChild(btnPlus); controls.appendChild(btnMinus);
-      li.appendChild(name); li.appendChild(score); li.appendChild(controls);
+
+      // Médaille (top 3)
+      const medal = document.createElement('div');
+      medal.className = 'score-medal';
+      medal.textContent = medals[idx] || '';
+      if (idx <= 2) li.classList.add(['gold','silver','bronze'][idx]);
+
+      // Nom + statut en ligne
+      const name = document.createElement('div');
+      name.className = 'score-name';
+      const online = document.createElement('span');
+      online.className = 'online-dot' + (p.connected ? ' online' : '');
+      name.appendChild(online);
+      const txt = document.createElement('span');
+      txt.textContent = ' ' + p.name;
+      name.appendChild(txt);
+
+      // Score
+      const score = document.createElement('div');
+      score.className = 'score-value';
+      score.textContent = p.score;
+
+      // Contrôles ▲/▼
+      const controls = document.createElement('div');
+      controls.className = 'score-controls';
+      const btnPlus = document.createElement('button');
+      btnPlus.className = 'score-btn plus';
+      btnPlus.textContent = '▲';
+      btnPlus.title = 'Ajouter 1 point';
+      btnPlus.addEventListener('click', () => {
+        score.textContent = String((parseInt(score.textContent||'0',10)||0)+1);
+        socket.emit('scores:adjust', { name: p.name, delta: +1 });
+      });
+      const btnMinus = document.createElement('button');
+      btnMinus.className = 'score-btn minus';
+      btnMinus.textContent = '▼';
+      btnMinus.title = 'Retirer 1 point';
+      btnMinus.addEventListener('click', () => {
+        score.textContent = String((parseInt(score.textContent||'0',10)||0)-1);
+        socket.emit('scores:adjust', { name: p.name, delta: -1 });
+      });
+      controls.appendChild(btnPlus);
+      controls.appendChild(btnMinus);
+
+      li.appendChild(medal);
+      li.appendChild(name);
+      li.appendChild(score);
+      li.appendChild(controls);
+
+      // petite animation d’apparition
+      li.style.animation = 'pop-in .25s ease-out';
       els.players.appendChild(li);
     });
   }
+
 
   function stopCountdownUI() { if (cdTimer) { clearInterval(cdTimer); cdTimer = null; } els.countdown.classList.remove('show'); }
   function startCountdown(sec = 3, onEnd) {

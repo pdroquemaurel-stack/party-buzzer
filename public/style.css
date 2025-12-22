@@ -482,3 +482,37 @@ html, body, .tv-body { height: 100%; overflow: hidden; }
 .score-footer button {
   width: 100%;
 }
+
+/* Médailles top 3 + statut en ligne + animation */
+.score-list { list-style:none; padding:0; margin:0; display:grid; gap:.5rem; }
+.score-item {
+  display:grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items:center;
+  gap:.6rem;
+  padding:.5rem .6rem;
+  background: rgba(255,255,255,.07);
+  border: 2px solid rgba(255,255,255,.12);
+  border-radius: 12px;
+  box-shadow: 0 3px 0 rgba(0,0,0,.25);
+}
+
+.score-medal {
+  width: 2rem; text-align: center; font-size: 1.2rem;
+  filter: drop-shadow(0 2px 0 rgba(0,0,0,.35));
+}
+.score-item.gold   { border-color: rgba(255,215,0,.6); }
+.score-item.silver { border-color: rgba(192,192,192,.6); }
+.score-item.bronze { border-color: rgba(205,127,50,.6); }
+
+.online-dot {
+  display:inline-block; width: .6rem; height: .6rem; border-radius: 50%;
+  background: #777; box-shadow: 0 0 0 2px rgba(0,0,0,.25);
+  vertical-align: middle;
+}
+.online-dot.online { background: #00e676; }
+
+@keyframes pop-in {
+  from { transform: scale(.96); opacity: .0; }
+  to   { transform: scale(1); opacity: 1; }
+}
