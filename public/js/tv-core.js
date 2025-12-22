@@ -15,6 +15,9 @@ export const Core = (() => {
   let room = generateRoomCode(5);
   let currentMode = 'buzzer';
 
+  // Auto-play global flag pour STOP
+  let autoPlayRunning = false;
+
   // Elements
   const els = {
     roomCode: document.getElementById('roomCode'),
@@ -33,6 +36,7 @@ export const Core = (() => {
 
     // Overlays
     quizQOverlay: document.getElementById('quizQOverlay'),
+    overlayStopBtn: document.getElementById('overlayStopBtn'),
     quizQText: document.getElementById('quizQText'),
     quizTimer: document.getElementById('quizTimer'),
     freeHint: document.getElementById('freeHint'),
@@ -108,7 +112,7 @@ export const Core = (() => {
 
   function renderPlayers(list) {
     els.players.innerHTML = '';
-    const medals = ['🥇', '🥈', '💩'];
+    const medals = ['🥇', '🥈', '🥉'];
 
     (list || []).forEach((p, idx) => {
       const li = document.createElement('li');
@@ -139,8 +143,7 @@ export const Core = (() => {
       // Score
       const score = document.createElement('div');
       score.className = 'score-value';
-      score.textContent = `${p.score} ${p.score === 1 ? 'point' : 'points'}`;
-
+      score.textContent = p.score;
 
       // Controls
       const controls = document.createElement('div');
@@ -339,8 +342,19 @@ export const Core = (() => {
     });
 
     els.resetScoresBtn?.addEventListener('click', () => socket.emit('scores:reset'));
+
+    // Bouton STOP (croix rouge) dans overlay: arrête l'auto‑play global
+    if (els.overlayStopBtn && !els.overlayStopBtn._wired) {
+      els.overlayStopBtn._wired = true;
+      els.overlayStopBtn.addEventListener('click', () => {
+        autoPlayRunning = false;
+        showProgress('Auto‑play arrêté');
+        setTimeout(hideProgress, 1200);
+      });
+    }
   });
 
+  // API exposée aux modules
   return {
     socket,
     setModeUI,
@@ -352,6 +366,8 @@ export const Core = (() => {
     playBeep,
     showProgress,
     hideProgress,
-    els
+    els,
+    get autoPlayRunning() { return autoPlayRunning; },
+    set autoPlayRunning(v) { autoPlayRunning = !!v; }
   };
 })();

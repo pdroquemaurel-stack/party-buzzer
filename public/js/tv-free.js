@@ -20,12 +20,12 @@ function pickRandomFreeItems(src, amount, secondsOverride) {
 GameRegistry.register('free', {
   onEnter() {
     const loadBtn = document.getElementById('freeLoadBtn');
-    const randBtn = document.getElementById('freeRandomBtn');
     const loadedInfo = document.getElementById('freeLoadedInfo');
     const qInput = document.getElementById('freeQuestion');
     const sInput = document.getElementById('freeSeconds');
     const countInput = document.getElementById('freeSeriesCount');
     const startBtn = document.getElementById('freeStartBtn');
+    const randAskBtn = document.getElementById('freeRandomAskBtn');
     const seriesBtn = document.getElementById('freeSeriesBtn');
     const info = document.getElementById('freeInfo');
 
@@ -37,18 +37,12 @@ GameRegistry.register('free', {
           const data = await res.json();
           bank = Array.isArray(data) ? data : [];
           loadedInfo.textContent = `${bank.length} question(s) chargée(s).`;
-          randBtn.disabled = bank.length === 0;
         } catch {
           alert('Impossible de charger /free-questions.json');
-          bank = []; loadedInfo.textContent = ''; randBtn.disabled = true;
+          bank = []; loadedInfo.textContent = '';
         }
       });
-      randBtn.addEventListener('click', () => {
-        if (!bank.length) return;
-        const item = bank[Math.floor(Math.random() * bank.length)];
-        qInput.value = item.q || '';
-        sInput.value = item.s ?? 30;
-      });
+
       startBtn.addEventListener('click', () => {
         const q = qInput.value.trim();
         const seconds = Math.max(5, Math.min(180, parseInt(sInput.value || '30', 10)));
@@ -58,8 +52,21 @@ GameRegistry.register('free', {
         info.textContent = `Question posée (${seconds}s)`;
         setTimeout(() => Core.socket.emit('free:close'), seconds * 1000);
       });
+
+      randAskBtn.addEventListener('click', () => {
+        if (!bank.length) { alert('Charge la banque'); return; }
+        const item = bank[Math.floor(Math.random() * bank.length)];
+        const q = item.q || '';
+        if (!q) return;
+        const seconds = Math.max(5, Math.min(180, parseInt(sInput.value || (item.s || '30'), 10)));
+        Core.socket.emit('free:start', { question: q, seconds });
+        Core.socket.emit('countdown:start', seconds);
+        info.textContent = `Question posée (${seconds}s)`;
+        setTimeout(() => Core.socket.emit('free:close'), seconds * 1000);
+      });
+
       seriesBtn.addEventListener('click', () => {
-        if (!bank.length) { alert('Charge d’abord la banque de questions'); return; }
+        if (!bank.length) { alert('Charge la banque'); return; }
         const count = Math.max(1, Math.min(50, parseInt(countInput.value || '20', 10)));
         const seconds = Math.max(5, Math.min(180, parseInt(sInput.value || '30', 10)));
         const items = pickRandomFreeItems(bank, count, seconds);
@@ -87,7 +94,6 @@ GameRegistry.register('free', {
     }
   },
   onQuestion(payload) {
-    // Deux cas: question pendant série/single, ou ouverture de review
     if (payload.phase === 'review') {
       Core.els.freeReviewPosition.textContent = `${payload.index + 1}/${payload.total}`;
       Core.els.freeReviewQuestion.textContent = payload.question;
@@ -109,7 +115,6 @@ GameRegistry.register('free', {
     const freeInfo = document.getElementById('freeInfo');
     if (typeof payload.index === 'number' && typeof payload.total === 'number') {
       freeInfo.textContent = `Question ${payload.index + 1}/${payload.total} en cours (${payload.seconds}s)`;
-      // Planifie la question suivante lorsque le timer est terminé
       setTimeout(() => {
         Core.hideQuestionOverlay();
         setTimeout(() => Core.socket.emit('free:series:next_question'), 400);
@@ -119,7 +124,6 @@ GameRegistry.register('free', {
     }
   },
   onProgress({ name, validated, context }) {
-    // Toggle visuel dans overlay single ou review
     const list = context === 'review' ? Core.els.freeReviewList : Core.els.freeResultsList;
     const rows = list.querySelectorAll('.free-item');
     rows.forEach(r => {
@@ -128,7 +132,6 @@ GameRegistry.register('free', {
     });
   },
   onResult({ question, items }) {
-    // Single results
     const list = Core.els.freeResultsList;
     list.innerHTML = '';
     const title = document.createElement('div');

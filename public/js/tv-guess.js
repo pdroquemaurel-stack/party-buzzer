@@ -30,18 +30,21 @@ function renderGuessChart(prog) {
 
 function startAutoplay(count) {
   if (!bank.length) { alert('Charge la banque'); return; }
-  autoplay.running = true; autoplay.total = count; autoplay.done = 0;
+  Core.autoPlayRunning = true;
+  autoplay = { running: true, total: count, done: 0 };
   runNext();
+
   function runNext() {
-    if (!autoplay.running) return;
+    if (!Core.autoPlayRunning || !autoplay.running) { autoplay.running = false; Core.hideProgress(); return; }
     if (autoplay.done >= autoplay.total) { autoplay.running = false; Core.hideProgress(); return; }
+
     const item = bank[Math.floor(Math.random() * bank.length)];
-    const q = item.q || document.getElementById('guessQuestion').value.trim();
+    const q = item.q || '';
     const min = item.min ?? parseInt(document.getElementById('guessMin').value || '0', 10);
     const max = item.max ?? parseInt(document.getElementById('guessMax').value || '100', 10);
     const correct = item.c ?? parseInt(document.getElementById('guessCorrect').value || '0', 10);
-    const seconds = Math.max(1, Math.min(60, parseInt(document.getElementById('guessSeconds').value || '8', 10)));
-    if (!q) { autoplay.running = false; alert('Question vide.'); return; }
+    const seconds = Math.max(1, Math.min(60, parseInt(document.getElementById('guessSeconds').value || (item.s || '8'), 10)));
+    if (!q) { autoplay.running = false; Core.autoPlayRunning = false; alert('Question vide.'); return; }
 
     Core.showProgress(`Auto‑play Devine: ${autoplay.done + 1}/${autoplay.total}`);
     Core.socket.emit('guess:start', { question: q, correct, min, max, seconds });
@@ -49,7 +52,7 @@ function startAutoplay(count) {
     setTimeout(() => {
       Core.socket.emit('guess:close');
       autoplay.done++;
-      setTimeout(runNext, 1200);
+      if (Core.autoPlayRunning && autoplay.running) setTimeout(runNext, 1200);
     }, seconds * 1000);
   }
 }
@@ -57,26 +60,10 @@ function startAutoplay(count) {
 GameRegistry.register('guess', {
   onEnter() {
     const loadBtn = document.getElementById('guessLoadBtn');
-    const randBtn = document.getElementById('guessRandomBtn');
     const loadedInfo = document.getElementById('guessLoadedInfo');
-    const qInput = document.getElementById('guessQuestion');
-    const cInput = document.getElementById('guessCorrect');
-    const minInput = document.getElementById('guessMin');
-    const maxInput = document.getElementById('guessMax');
-    const sInput = document.getElementById('guessSeconds');
     const startBtn = document.getElementById('guessStartBtn');
-    const closeBtn = document.getElementById('guessCloseBtn');
-    const autoBtnId = 'guessAutoBtn';
-
-    if (!document.getElementById(autoBtnId)) {
-      const autoBtn = document.createElement('button');
-      autoBtn.id = autoBtnId;
-      autoBtn.className = 'btn-cyan';
-      autoBtn.textContent = 'Auto‑play (10)';
-      autoBtn.style.marginLeft = '.4rem';
-      closeBtn.parentElement.appendChild(autoBtn);
-      autoBtn.addEventListener('click', () => startAutoplay(10));
-    }
+    const randAskBtn = document.getElementById('guessRandomAskBtn');
+    const seriesBtn = document.getElementById('guessSeriesBtn');
 
     if (!loadBtn._wired) {
       loadBtn._wired = true;
@@ -86,33 +73,43 @@ GameRegistry.register('guess', {
           const data = await res.json();
           bank = Array.isArray(data) ? data : [];
           loadedInfo.textContent = `${bank.length} question(s) chargée(s).`;
-          randBtn.disabled = bank.length === 0;
         } catch {
           alert('Impossible de charger /guess-questions.json');
-          bank = []; loadedInfo.textContent=''; randBtn.disabled = true;
+          bank = []; loadedInfo.textContent=''; 
         }
       });
-      randBtn.addEventListener('click', () => {
-        if (!bank.length) return;
-        const item = bank[Math.floor(Math.random() * bank.length)];
-        qInput.value = item.q || '';
-        cInput.value = item.c ?? '';
-        minInput.value = item.min ?? 0;
-        maxInput.value = item.max ?? 100;
-        sInput.value = item.s ?? 8;
-      });
+
       startBtn.addEventListener('click', () => {
-        const q = qInput.value.trim();
+        const q = document.getElementById('guessQuestion').value.trim();
         if (!q) { alert('Entre une question'); return; }
-        const correct = parseInt(cInput.value || '0', 10);
-        const min = parseInt(minInput.value || '0', 10);
-        const max = parseInt(maxInput.value || '100', 10);
-        const seconds = Math.max(1, Math.min(60, parseInt(sInput.value || '8', 10)));
+        const correct = parseInt(document.getElementById('guessCorrect').value || '0', 10);
+        const min = parseInt(document.getElementById('guessMin').value || '0', 10);
+        const max = parseInt(document.getElementById('guessMax').value || '100', 10);
+        const seconds = Math.max(1, Math.min(60, parseInt(document.getElementById('guessSeconds').value || '8', 10)));
         Core.socket.emit('guess:start', { question: q, correct, min, max, seconds });
         Core.socket.emit('countdown:start', seconds);
         setTimeout(() => Core.socket.emit('guess:close'), seconds * 1000);
       });
-      closeBtn.addEventListener('click', () => Core.socket.emit('guess:close'));
+
+      randAskBtn.addEventListener('click', () => {
+        if (!bank.length) { alert('Charge la banque'); return; }
+        const item = bank[Math.floor(Math.random() * bank.length)];
+        const q = item.q || '';
+        const min = item.min ?? 0;
+        const max = item.max ?? 100;
+        const correct = item.c ?? 0;
+        const seconds = Math.max(1, Math.min(60, parseInt(document.getElementById('guessSeconds').value || (item.s || '8'), 10)));
+        if (!q) return;
+        Core.socket.emit('guess:start', { question: q, correct, min, max, seconds });
+        Core.socket.emit('countdown:start', seconds);
+        setTimeout(() => Core.socket.emit('guess:close'), seconds * 1000);
+      });
+
+      seriesBtn.addEventListener('click', () => {
+        if (!bank.length) { alert('Charge la banque'); return; }
+        const count = Math.max(1, Math.min(50, parseInt(document.getElementById('guessSeriesCount').value || '10', 10)));
+        startAutoplay(count);
+      });
     }
   },
   onQuestion({ question, min, max, seconds }) {

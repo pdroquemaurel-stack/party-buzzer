@@ -541,3 +541,19 @@ html, body, .tv-body { height: 100%; overflow: hidden; }
   box-shadow: 0 8px 20px rgba(0,0,0,.28);
   backdrop-filter: blur(6px);
 }
+
+/* Bouton STOP (croix rouge) dans l'overlay de question */
+.overlay .overlay-stop {
+  position: absolute;
+  top: 16px; right: 16px;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.25);
+  background: linear-gradient(180deg, #ff9a9a, #ff5252);
+  color: #1a1200;
+  font-weight: 900;
+  box-shadow: 0 6px 14px rgba(0,0,0,.35);
+  cursor: pointer;
+}
+.overlay .overlay-stop:hover { filter: brightness(1.05); }
+.overlay .overlay-stop:active { transform: translateY(2px); }

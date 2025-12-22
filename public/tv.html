@@ -59,14 +59,15 @@
       <!-- Quiz -->
       <section id="quizPanel" class="card" style="display:none;" data-game-panel="quiz">
         <h2>Quiz Vrai/Faux</h2>
+
         <div class="card soft">
           <h3 style="margin-top:0;">Banque de questions</h3>
           <div class="row btn-row">
             <button id="quizLoadBtn">Charger banque</button>
-            <button id="quizRandomBtn" disabled>Question aléatoire</button>
             <span id="quizLoadedInfo" class="hint"></span>
           </div>
         </div>
+
         <div class="field">
           <label>Question</label>
           <input id="quizQuestion" type="text" placeholder="Ex: Le Soleil est une étoile ?" />
@@ -75,13 +76,20 @@
           <label><input type="radio" name="quizCorrect" id="quizTrue" value="true" checked /> Vrai</label>
           <label><input type="radio" name="quizCorrect" id="quizFalse" value="false" /> Faux</label>
         </div>
-        <div class="field" style="max-width:220px;">
-          <label>Durée (secondes)</label>
-          <input id="quizSeconds" type="number" min="1" max="30" value="5" />
+        <div class="row btn-row" style="flex-wrap:wrap;">
+          <div class="field" style="min-width:160px; max-width:220px;">
+            <label>Durée (secondes)</label>
+            <input id="quizSeconds" type="number" min="1" max="30" value="5" />
+          </div>
+          <div class="field" style="min-width:160px; max-width:220px;">
+            <label>Questions dans la série</label>
+            <input id="quizSeriesCount" type="number" min="1" max="50" value="10" />
+          </div>
         </div>
         <div class="row btn-row">
-          <button id="quizStartBtn" class="btn-green">Poser la question (3-2-1)</button>
-          <button id="quizCloseBtn">Clore et corriger</button>
+          <button id="quizStartBtn" class="btn-green">Poser (3-2-1)</button>
+          <button id="quizRandomAskBtn" class="btn-cyan">Question aléatoire</button>
+          <button id="quizSeriesBtn" class="btn-cyan">Lancer une série</button>
         </div>
         <div id="quizInfo" class="row hint"></div>
       </section>
@@ -89,14 +97,15 @@
       <!-- Devine -->
       <section id="guessPanel" class="card" style="display:none;" data-game-panel="guess">
         <h2>Devine le nombre</h2>
+
         <div class="card soft">
           <h3 style="margin-top:0;">Banque</h3>
           <div class="row btn-row">
             <button id="guessLoadBtn">Charger banque</button>
-            <button id="guessRandomBtn" disabled>Question aléatoire</button>
             <span id="guessLoadedInfo" class="hint"></span>
           </div>
         </div>
+
         <div class="field">
           <label>Question</label>
           <input id="guessQuestion" type="text" placeholder="Ex: Combien font 7 x 8 ?" />
@@ -118,12 +127,18 @@
             <label>Durée (s)</label>
             <input id="guessSeconds" type="number" min="1" max="60" value="8" />
           </div>
+          <div class="field" style="min-width:160px; max-width:220px;">
+            <label>Questions dans la série</label>
+            <input id="guessSeriesCount" type="number" min="1" max="50" value="10" />
+          </div>
         </div>
         <div class="row btn-row">
           <button id="guessStartBtn" class="btn-green">Poser (3-2-1)</button>
-          <button id="guessCloseBtn">Clore et corriger</button>
+          <button id="guessRandomAskBtn" class="btn-cyan">Question aléatoire</button>
+          <button id="guessSeriesBtn" class="btn-cyan">Lancer une série</button>
         </div>
         <div id="guessInfo" class="row hint"></div>
+
         <div class="field">
           <label>Répartition des réponses</label>
           <div id="guessChart" class="chart"></div>
@@ -134,14 +149,15 @@
       <!-- Réponse libre -->
       <section id="freePanel" class="card" style="display:none;" data-game-panel="free">
         <h2>Réponse libre</h2>
+
         <div class="card soft">
           <h3 style="margin-top:0;">Banque</h3>
           <div class="row btn-row">
             <button id="freeLoadBtn">Charger banque</button>
-            <button id="freeRandomBtn" disabled>Question aléatoire</button>
             <span id="freeLoadedInfo" class="hint"></span>
           </div>
         </div>
+
         <div class="field">
           <label>Question</label>
           <input id="freeQuestion" type="text" placeholder="Ex: Écris une définition drôle de 'internet'." />
@@ -158,6 +174,7 @@
         </div>
         <div class="row btn-row">
           <button id="freeStartBtn" class="btn-green">Poser (3-2-1)</button>
+          <button id="freeRandomAskBtn" class="btn-cyan">Question aléatoire</button>
           <button id="freeSeriesBtn" class="btn-cyan">Lancer une série</button>
         </div>
         <div id="freeInfo" class="row hint"></div>
@@ -193,6 +210,7 @@
   </div>
 
   <div id="quizQOverlay" class="overlay">
+    <button id="overlayStopBtn" class="overlay-stop" title="Arrêter l'auto‑play">✖</button>
     <div>
       <div class="label">Question</div>
       <div id="quizQText" class="question"></div>
