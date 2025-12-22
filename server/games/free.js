@@ -1,6 +1,4 @@
 // server/games/free.js
-// Jeu "Réponse Libre" avec série et correction différée + bonne réponse (answer) pour comparaison.
-
 function clampInt(v, min, max, def) {
   const n = parseInt(v, 10);
   if (!Number.isFinite(n)) return def;
@@ -13,25 +11,24 @@ module.exports = {
 
   init(room) {
     room.game = {
-      mode: 'single',             // 'single' | 'series'
-      phase: 'idle',              // 'idle' | 'single_active' | 'series_active' | 'review'
-      // Single
+      mode: 'single',
+      phase: 'idle',
+      // single
       open: false,
       question: '',
       seconds: 30,
-      answer: '',                 // bonne réponse attendue (affichage correction)
-      answers: new Map(),         // name -> { text, validated: false }
-      // Series
-      series: [],                 // [{ q, s, a }]
+      answer: '',
+      answers: new Map(),
+      // series
+      series: [],        // [{ q, s, a }]
       seriesLength: 0,
       currentIndex: -1,
-      answersByIdx: new Map(),    // idx -> Map(name -> { text, validated })
+      answersByIdx: new Map(), // idx -> Map(name -> { text, validated })
       reviewIndex: 0
     };
   },
 
-  // ---------- SINGLE QUESTION ----------
-  // NOTE: la TV peut fournir {answer} quand on pose depuis la banque
+  // SINGLE
   adminStart(io, room, code, { question, seconds, answer }) {
     const q = String(question || '').trim().slice(0, 300);
     const sec = clampInt(seconds, 5, 180, 30);
@@ -42,7 +39,7 @@ module.exports = {
     room.game.open = true;
     room.game.question = q;
     room.game.seconds = sec;
-    room.game.answer = a || ''; // peut être vide si question libre sans "bonne réponse"
+    room.game.answer = a;
     room.game.answers = new Map();
 
     io.to(code).emit('mode:changed', { mode: 'free' });
@@ -86,17 +83,22 @@ module.exports = {
       results.push({ name: p.name, text: rec ? rec.text : '', validated: rec ? !!rec.validated : false });
     });
     g.answers.forEach((rec, name) => {
-      if (!results.find(r => r.name === name)) results.push({ name, text: rec.text, validated: !!rec.validated });
+      if (!results.find(r => r.name === name)) {
+        results.push({ name, text: rec.text, validated: !!rec.validated });
+      }
     });
     results.sort((a, b) => a.name.localeCompare(b.name));
 
-    // IMPORTANT: transmettre expected = g.answer
-    io.to(code).emit('free:results', { question: g.question, expected: g.answer || '', items: results });
+    io.to(code).emit('free:results', {
+      question: g.question,
+      expected: g.answer || '',
+      items: results
+    });
   },
 
   adminToggleValidate(io, room, code, playerName, broadcastPlayers) {
     const g = room.game || {};
-    // Single
+
     if (g.mode === 'single' && g.phase === 'idle') {
       const rec = g.answers.get(playerName) || { text: '', validated: false };
       rec.validated = !rec.validated;
@@ -109,7 +111,6 @@ module.exports = {
       return;
     }
 
-    // Series review
     if (g.mode === 'series' && g.phase === 'review') {
       const idx = g.reviewIndex;
       let map = g.answersByIdx.get(idx);
@@ -117,7 +118,6 @@ module.exports = {
       const rec = map.get(playerName) || { text: '', validated: false };
       rec.validated = !rec.validated;
       map.set(playerName, rec);
-
       const prev = room.scores.get(playerName) || 0;
       const next = rec.validated ? prev + 1 : Math.max(0, prev - 1);
       room.scores.set(playerName, next);
@@ -127,13 +127,11 @@ module.exports = {
     }
   },
 
-  // ---------- SERIES ----------
-  // items = [{ q, s, a }]
+  // SERIES
   adminSeriesStart(io, room, code, { items }) {
     const list = Array.isArray(items) ? items.slice(0, 50) : [];
     if (list.length === 0) return;
 
-    // Normaliser {q, s, a}
     const norm = list.map(it => ({
       q: String((it && it.q) || '').slice(0, 300),
       s: clampInt(it && it.s, 5, 180, 30),
@@ -160,9 +158,9 @@ module.exports = {
       g.reviewIndex = 0;
       const first = g.series[0];
       const items = this._buildReviewItems(room, g, 0);
-      // IMPORTANT: expected = first.a
       io.to(code).emit('free:review_open', {
-        index: 0, total: g.seriesLength,
+        index: 0,
+        total: g.seriesLength,
         question: first.q,
         expected: first.a || '',
         items
@@ -182,7 +180,8 @@ module.exports = {
     const first = g.series[0];
     const items = this._buildReviewItems(room, g, 0);
     io.to(code).emit('free:review_open', {
-      index: 0, total: g.seriesLength,
+      index: 0,
+      total: g.seriesLength,
       question: first.q,
       expected: first.a || '',
       items
@@ -198,8 +197,11 @@ module.exports = {
     const a = g.series[idx].a || '';
     const items = this._buildReviewItems(room, g, idx);
     io.to(code).emit('free:review_open', {
-      index: idx, total: g.seriesLength,
-      question: q, expected: a, items
+      index: idx,
+      total: g.seriesLength,
+      question: q,
+      expected: a,
+      items
     });
   },
 
@@ -211,7 +213,9 @@ module.exports = {
       items.push({ name: p.name, text: rec ? rec.text : '', validated: rec ? !!rec.validated : false });
     });
     map.forEach((rec, name) => {
-      if (!items.find(r => r.name === name)) items.push({ name, text: rec.text, validated: !!rec.validated });
+      if (!items.find(r => r.name === name)) {
+        items.push({ name, text: rec.text, validated: !!rec.validated });
+      }
     });
     items.sort((a, b) => a.name.localeCompare(b.name));
     return items;
