@@ -8,21 +8,20 @@
 </head>
 <body class="tv-body">
   <main class="container tv-layout-3 tight">
-    <!-- Bandeau supérieur: sélecteur de jeu -->
+    <!-- Bandeau supérieur -->
     <header class="tv-header card">
-      <div class="tv-header-left">
-        <h1 style="margin:0;">Party Buzzer</h1>
-      </div>
+      <div class="tv-header-left"><h1 style="margin:0;">Party Buzzer</h1></div>
       <div class="tv-header-right">
         <div class="mode-switch">
           <label class="mode-pill"><input type="radio" name="mode" value="buzzer" checked /> Buzzer</label>
           <label class="mode-pill"><input type="radio" name="mode" value="quiz" /> Quiz V/F</label>
           <label class="mode-pill"><input type="radio" name="mode" value="guess" /> Devine</label>
+          <label class="mode-pill"><input type="radio" name="mode" value="free" /> Réponse libre</label>
         </div>
       </div>
     </header>
 
-    <!-- Colonne gauche: paramètres de salle + QR + retour -->
+    <!-- Colonne gauche -->
     <aside class="tv-left card">
       <section class="tv-room">
         <div class="row" style="display:flex; align-items:center; justify-content:space-between; gap:.8rem;">
@@ -47,7 +46,7 @@
       </section>
     </aside>
 
-    <!-- Zone centrale: contrôles des jeux (peut scroller localement si nécessaire) -->
+    <!-- Centre: Jeux -->
     <section class="tv-center">
       <!-- Buzzer -->
       <section id="buzzerPanel" class="card">
@@ -62,7 +61,6 @@
       <!-- Quiz -->
       <section id="quizPanel" class="card" style="display:none;">
         <h2>Quiz Vrai/Faux</h2>
-
         <div class="card soft">
           <h3 style="margin-top:0;">Banque de questions</h3>
           <div class="row btn-row">
@@ -71,7 +69,6 @@
             <span id="quizLoadedInfo" class="hint"></span>
           </div>
         </div>
-
         <div class="field">
           <label>Question</label>
           <input id="quizQuestion" type="text" placeholder="Ex: Le Soleil est une étoile ?" />
@@ -91,10 +88,9 @@
         <div id="quizInfo" class="row hint"></div>
       </section>
 
-      <!-- Devine le nombre -->
+      <!-- Devine -->
       <section id="guessPanel" class="card" style="display:none;">
         <h2>Devine le nombre</h2>
-
         <div class="card soft">
           <h3 style="margin-top:0;">Banque</h3>
           <div class="row btn-row">
@@ -103,7 +99,6 @@
             <span id="guessLoadedInfo" class="hint"></span>
           </div>
         </div>
-
         <div class="field">
           <label>Question</label>
           <input id="guessQuestion" type="text" placeholder="Ex: Combien font 7 x 8 ?" />
@@ -131,16 +126,33 @@
           <button id="guessCloseBtn">Clore et corriger</button>
         </div>
         <div id="guessInfo" class="row hint"></div>
-
         <div class="field">
           <label>Répartition des réponses</label>
           <div id="guessChart" class="chart"></div>
           <div id="guessScale" class="chart-scale"><span>Min</span><span>Max</span></div>
         </div>
       </section>
+
+      <!-- Réponse libre -->
+      <section id="freePanel" class="card" style="display:none;">
+        <h2>Réponse libre</h2>
+        <div class="field">
+          <label>Question</label>
+          <input id="freeQuestion" type="text" placeholder="Ex: Écris une définition drôle de 'internet'." />
+        </div>
+        <div class="field" style="max-width:220px;">
+          <label>Durée (secondes)</label>
+          <input id="freeSeconds" type="number" min="5" max="120" value="30" />
+        </div>
+        <div class="row btn-row">
+          <button id="freeStartBtn" class="btn-green">Poser (3-2-1)</button>
+          <button id="freeCloseBtn">Afficher les réponses</button>
+        </div>
+        <div id="freeInfo" class="row hint"></div>
+      </section>
     </section>
 
-    <!-- Colonne droite: scores avec flèches -->
+    <!-- Droite: Scores -->
     <aside class="tv-right card">
       <section class="tv-scores">
         <h2>Scores</h2>
@@ -158,6 +170,7 @@
     </div>
   </div>
 
+  <!-- Countdown -->
   <div id="countdown" class="overlay">
     <div>
       <div class="label">Début dans</div>
@@ -165,11 +178,24 @@
     </div>
   </div>
 
+  <!-- Overlay Question (Quiz/Guess/Free) -->
   <div id="quizQOverlay" class="overlay">
     <div>
       <div class="label">Question</div>
       <div id="quizQText" class="question"></div>
       <div id="quizTimer" class="hint" style="margin-top:.8rem;"></div>
+      <div id="freeHint" class="hint" style="margin-top: .6rem; display:none;">Écrivez votre réponse sur votre téléphone</div>
+    </div>
+  </div>
+
+  <!-- Overlay Résultats (Réponse Libre) -->
+  <div id="freeResultsOverlay" class="overlay">
+    <div style="max-width: 1000px; width: 92vw; text-align: left;">
+      <div class="label" style="text-align:center;">Réponses</div>
+      <div id="freeResultsList" class="free-list"></div>
+      <div style="text-align:center; margin-top: 1rem;">
+        <button id="freeResultsCloseBtn">Fermer</button>
+      </div>
     </div>
   </div>
 
@@ -199,25 +225,26 @@
     }
 
     const els = {
+      // Salle
       roomCode: document.getElementById('roomCode'),
       qr: document.getElementById('qr'),
       qrLink: document.getElementById('qrLink'),
       regenBtn: document.getElementById('regenBtn'),
+      // Scores
       players: document.getElementById('players'),
-
+      // Status + countdown
       status: document.getElementById('status'),
-      startRoundBtn: document.getElementById('startRoundBtn'),
-      resetRoundBtn: document.getElementById('resetRoundBtn'),
-      resetScoresBtn: document.getElementById('resetScoresBtn'),
       overlay: document.getElementById('overlay'),
-      winnerName: document.getElementById('winnerName'),
       countdown: document.getElementById('countdown'),
       countNum: document.getElementById('countNum'),
-
+      winnerName: document.getElementById('winnerName'),
+      // Mode + panneaux
       modeRadios: document.getElementsByName('mode'),
-
-      // Quiz
+      buzzerPanel: document.getElementById('buzzerPanel'),
       quizPanel: document.getElementById('quizPanel'),
+      guessPanel: document.getElementById('guessPanel'),
+      freePanel: document.getElementById('freePanel'),
+      // Quiz
       quizLoadBtn: document.getElementById('quizLoadBtn'),
       quizRandomBtn: document.getElementById('quizRandomBtn'),
       quizLoadedInfo: document.getElementById('quizLoadedInfo'),
@@ -228,9 +255,7 @@
       quizStartBtn: document.getElementById('quizStartBtn'),
       quizCloseBtn: document.getElementById('quizCloseBtn'),
       quizInfo: document.getElementById('quizInfo'),
-
       // Guess
-      guessPanel: document.getElementById('guessPanel'),
       guessLoadBtn: document.getElementById('guessLoadBtn'),
       guessRandomBtn: document.getElementById('guessRandomBtn'),
       guessLoadedInfo: document.getElementById('guessLoadedInfo'),
@@ -244,28 +269,37 @@
       guessInfo: document.getElementById('guessInfo'),
       guessChart: document.getElementById('guessChart'),
       guessScale: document.getElementById('guessScale'),
-
-      // Overlay question
+      // Free
+      freeQuestion: document.getElementById('freeQuestion'),
+      freeSeconds: document.getElementById('freeSeconds'),
+      freeStartBtn: document.getElementById('freeStartBtn'),
+      freeCloseBtn: document.getElementById('freeCloseBtn'),
+      freeInfo: document.getElementById('freeInfo'),
+      // Overlays question et free résultats
       quizQOverlay: document.getElementById('quizQOverlay'),
       quizQText: document.getElementById('quizQText'),
-      quizTimer: document.getElementById('quizTimer')
+      quizTimer: document.getElementById('quizTimer'),
+      freeHint: document.getElementById('freeHint'),
+      freeResultsOverlay: document.getElementById('freeResultsOverlay'),
+      freeResultsList: document.getElementById('freeResultsList'),
+      freeResultsCloseBtn: document.getElementById('freeResultsCloseBtn'),
+
+      // Buzzer actions
+      startRoundBtn: document.getElementById('startRoundBtn'),
+      resetRoundBtn: document.getElementById('resetRoundBtn'),
+      resetScoresBtn: document.getElementById('resetScoresBtn')
     };
 
     const socket = io();
     let room = generateRoomCode(5);
 
-    // Timers
     let cdTimer = null;
     let quizTimer = null;
-
-    // Banques
     let questionBankQuiz = [];
     let questionBankGuess = [];
 
     const FIXED_BASE = 'https://party-buzzer.onrender.com';
-    function buildJoinUrl() {
-      return FIXED_BASE + '/join?room=' + encodeURIComponent(room);
-    }
+    function buildJoinUrl() { return FIXED_BASE + '/join?room=' + encodeURIComponent(room); }
     function renderInvite() {
       els.roomCode.textContent = room;
       const joinUrl = buildJoinUrl();
@@ -274,79 +308,48 @@
       els.qr.src = qrApi + encodeURIComponent(joinUrl);
     }
 
-    // Mise à jour des scores (optimiste + synchro serveur)
     function renderPlayers(list) {
       els.players.innerHTML = '';
       (list || []).forEach(p => {
         const li = document.createElement('li');
         li.className = 'score-item';
-
-        const name = document.createElement('div');
-        name.className = 'score-name';
-        name.textContent = p.name;
-
-        const score = document.createElement('div');
-        score.className = 'score-value';
-        score.textContent = p.score;
-
-        const controls = document.createElement('div');
-        controls.className = 'score-controls';
-
-        const btnPlus = document.createElement('button');
-        btnPlus.className = 'score-btn plus';
-        btnPlus.textContent = '▲';
+        const name = document.createElement('div'); name.className = 'score-name'; name.textContent = p.name;
+        const score = document.createElement('div'); score.className = 'score-value'; score.textContent = p.score;
+        const controls = document.createElement('div'); controls.className = 'score-controls';
+        const btnPlus = document.createElement('button'); btnPlus.className = 'score-btn plus'; btnPlus.textContent = '▲';
         btnPlus.title = 'Ajouter 1 point';
-        btnPlus.addEventListener('click', () => {
-          // Optimiste
-          const val = parseInt(score.textContent || '0', 10) + 1;
-          score.textContent = String(val);
-          socket.emit('scores:adjust', { name: p.name, delta: +1 });
-        });
-
-        const btnMinus = document.createElement('button');
-        btnMinus.className = 'score-btn minus';
-        btnMinus.textContent = '▼';
+        btnPlus.addEventListener('click', () => { score.textContent = String((parseInt(score.textContent||'0',10)||0)+1); socket.emit('scores:adjust', { name: p.name, delta: +1 }); });
+        const btnMinus = document.createElement('button'); btnMinus.className = 'score-btn minus'; btnMinus.textContent = '▼';
         btnMinus.title = 'Retirer 1 point';
-        btnMinus.addEventListener('click', () => {
-          const val = parseInt(score.textContent || '0', 10) - 1;
-          score.textContent = String(val);
-          socket.emit('scores:adjust', { name: p.name, delta: -1 });
-        });
-
-        controls.appendChild(btnPlus);
-        controls.appendChild(btnMinus);
-
-        li.appendChild(name);
-        li.appendChild(score);
-        li.appendChild(controls);
+        btnMinus.addEventListener('click', () => { score.textContent = String((parseInt(score.textContent||'0',10)||0)-1); socket.emit('scores:adjust', { name: p.name, delta: -1 }); });
+        controls.appendChild(btnPlus); controls.appendChild(btnMinus);
+        li.appendChild(name); li.appendChild(score); li.appendChild(controls);
         els.players.appendChild(li);
       });
     }
-    function setStatus(text) { els.status.textContent = text || ''; }
 
-    function stopCountdownUI() {
-      if (cdTimer) { clearInterval(cdTimer); cdTimer = null; }
-      document.getElementById('countdown').classList.remove('show');
-    }
+    function setStatus(text) { els.status.textContent = text || ''; }
+    function stopCountdownUI() { if (cdTimer) { clearInterval(cdTimer); cdTimer = null; } els.countdown.classList.remove('show'); }
     function startCountdown(sec = 3, onEnd) {
       stopCountdownUI();
-      document.getElementById('countNum').textContent = sec;
-      document.getElementById('countdown').classList.add('show');
+      els.countNum.textContent = sec;
+      els.countdown.classList.add('show');
       socket.emit('countdown:start', sec);
       playBeep(700, 120);
       let remain = sec;
       cdTimer = setInterval(() => {
         remain--;
-        if (remain > 0) { document.getElementById('countNum').textContent = remain; playBeep(700, 120); }
+        if (remain > 0) { els.countNum.textContent = remain; playBeep(700, 120); }
         else { stopCountdownUI(); playBeep(1200, 200); if (typeof onEnd === 'function') onEnd(); }
       }, 1000);
     }
 
-    function showQuestionOverlay(question, seconds) {
+    function showQuestionOverlay(question, seconds, showFreeHint = false) {
       if (quizTimer) { clearInterval(quizTimer); quizTimer = null; }
       els.quizQText.textContent = question;
       let remain = seconds || 5;
       els.quizTimer.textContent = `Temps restant: ${remain}s`;
+      els.freeHint.style.display = showFreeHint ? 'block' : 'none';
       els.quizQOverlay.classList.add('show');
       quizTimer = setInterval(() => {
         remain--;
@@ -358,20 +361,20 @@
       if (quizTimer) { clearInterval(quizTimer); quizTimer = null; }
       els.quizQOverlay.classList.remove('show');
       els.quizTimer.textContent = '';
+      els.freeHint.style.display = 'none';
     }
 
     function setModeUI(mode) {
-      document.getElementById('buzzerPanel').style.display = (mode === 'buzzer') ? '' : 'none';
-      document.getElementById('quizPanel').style.display = (mode === 'quiz') ? '' : 'none';
-      document.getElementById('guessPanel').style.display = (mode === 'guess') ? '' : 'none';
+      els.buzzerPanel.style.display = (mode === 'buzzer') ? '' : 'none';
+      els.quizPanel.style.display = (mode === 'quiz') ? '' : 'none';
+      els.guessPanel.style.display = (mode === 'guess') ? '' : 'none';
+      els.freePanel.style.display = (mode === 'free') ? '' : 'none';
       for (const r of els.modeRadios) r.checked = (r.value === mode);
     }
 
     function renderGuessChart(prog) {
-      const chart = document.getElementById('guessChart');
-      const scale = document.getElementById('guessScale');
-      chart.innerHTML = '';
-      if (!prog || !Array.isArray(prog.bins) || prog.bins.length === 0) { scale.innerHTML = `<span>${prog?.min ?? ''}</span><span>${prog?.max ?? ''}</span>`; return; }
+      els.guessChart.innerHTML = '';
+      if (!prog || !Array.isArray(prog.bins) || prog.bins.length === 0) return;
       const maxCount = Math.max(1, ...prog.bins.map(b => b.count));
       prog.bins.forEach(b => {
         const bar = document.createElement('div');
@@ -383,9 +386,9 @@
         label.className = 'bar-label';
         label.textContent = b.count ? b.count : '';
         bar.appendChild(label);
-        chart.appendChild(bar);
+        els.guessChart.appendChild(bar);
       });
-      scale.innerHTML = `<span>${prog.min}</span><span>${prog.max}</span>`;
+      els.guessScale.innerHTML = `<span>${prog.min}</span><span>${prog.max}</span>`;
     }
 
     window.addEventListener('DOMContentLoaded', function () {
@@ -401,10 +404,11 @@
         els.overlay.classList.remove('show');
         stopCountdownUI();
         hideQuestionOverlay();
-        document.getElementById('quizInfo').textContent = '';
-        document.getElementById('guessInfo').textContent = '';
-        document.getElementById('guessChart').innerHTML = '';
-        setStatus(mode === 'buzzer' ? 'Mode Buzzer' : mode === 'quiz' ? 'Mode Quiz' : 'Mode Devine');
+        els.quizInfo && (els.quizInfo.textContent = '');
+        els.guessInfo && (els.guessInfo.textContent = '');
+        els.guessChart && (els.guessChart.innerHTML = '');
+        els.freeInfo && (els.freeInfo.textContent = '');
+        setStatus(mode === 'buzzer' ? 'Mode Buzzer' : mode === 'quiz' ? 'Mode Quiz' : mode === 'guess' ? 'Mode Devine' : 'Mode Réponse libre');
       });
       socket.on('room:players', renderPlayers);
       socket.on('scores:reset', () => setStatus('Scores réinitialisés'));
@@ -415,20 +419,18 @@
       socket.on('round:winner', (data) => { setStatus(`Gagnant: ${data.name} (+1)`); els.winnerName.textContent = data.name; els.overlay.classList.add('show'); playBeep(1200, 200); });
 
       // Quiz
-      socket.on('quiz:question', ({ question, seconds }) => { setModeUI('quiz'); document.getElementById('quizInfo').textContent = `Question en cours (${seconds}s): "${question}"`; showQuestionOverlay(question, seconds); });
-      socket.on('quiz:result', ({ correct, countTrue, countFalse, total }) => { hideQuestionOverlay(); const txt = correct ? 'Vrai' : 'Faux'; document.getElementById('quizInfo').textContent = `Bonne réponse: ${txt} — Vrai: ${countTrue}, Faux: ${countFalse}, Total: ${total}`; });
+      socket.on('quiz:question', ({ question, seconds }) => { setModeUI('quiz'); els.quizInfo.textContent = `Question en cours (${seconds}s): "${question}"`; showQuestionOverlay(question, seconds, false); });
+      socket.on('quiz:result', ({ correct, countTrue, countFalse, total }) => { hideQuestionOverlay(); const txt = correct ? 'Vrai' : 'Faux'; els.quizInfo.textContent = `Bonne réponse: ${txt} — Vrai: ${countTrue}, Faux: ${countFalse}, Total: ${total}`; });
 
       // Guess
       socket.on('guess:start', ({ question, min, max, seconds }) => {
         setModeUI('guess');
-        document.getElementById('guessInfo').textContent = `Question en cours (${seconds}s) — Intervalle: ${min} à ${max}`;
-        showQuestionOverlay(question, seconds);
-        document.getElementById('guessChart').innerHTML = '';
-        document.getElementById('guessScale').innerHTML = `<span>${min}</span><span>${max}</span>`;
+        els.guessInfo.textContent = `Question en cours (${seconds}s) — Intervalle: ${min} à ${max}`;
+        showQuestionOverlay(question, seconds, false);
+        els.guessChart.innerHTML = '';
+        els.guessScale.innerHTML = `<span>${min}</span><span>${max}</span>`;
       });
-      socket.on('guess:progress', (prog) => {
-        renderGuessChart(prog);
-      });
+      socket.on('guess:progress', (prog) => { renderGuessChart(prog); });
       socket.on('guess:result', ({ correct, winners, bestDiff, tol }) => {
         hideQuestionOverlay();
         const maxShow = 5;
@@ -437,18 +439,60 @@
         const more = names.length > maxShow ? ` (+${names.length - maxShow})` : '';
         const who = names.length ? shown + more : 'Aucun';
         const detail = (bestDiff === null) ? '' : ` — meilleur écart: ${bestDiff}${tol ? `, tolérance≈±${tol}` : ''}`;
-        document.getElementById('guessInfo').textContent = `Réponse: ${correct} — Gagnants: ${who}${detail}`;
+        els.guessInfo.textContent = `Réponse: ${correct} — Gagnants: ${who}${detail}`;
+      });
+
+      // Free (Réponse libre)
+      socket.on('free:question', ({ question, seconds }) => {
+        setModeUI('free');
+        els.freeInfo.textContent = `Question en cours (${seconds}s)`;
+        showQuestionOverlay(question, seconds, true);
+      });
+
+      socket.on('free:results', ({ question, items }) => {
+        hideQuestionOverlay();
+        els.freeResultsList.innerHTML = '';
+        const title = document.createElement('div');
+        title.className = 'hint';
+        title.style.marginBottom = '.6rem';
+        title.textContent = `Question: ${question}`;
+        els.freeResultsList.appendChild(title);
+
+        (items || []).forEach(item => {
+          const row = document.createElement('div');
+          row.className = 'free-item' + (item.validated ? ' validated' : '');
+          const who = document.createElement('div'); who.className = 'free-who'; who.textContent = item.name;
+          const text = document.createElement('div'); text.className = 'free-text'; text.textContent = item.text || '';
+          row.appendChild(who); row.appendChild(text);
+          row.addEventListener('click', () => {
+            socket.emit('free:toggle_validate', { name: item.name });
+          });
+          els.freeResultsList.appendChild(row);
+        });
+
+        els.freeResultsOverlay.classList.add('show');
+      });
+
+      socket.on('free:validated', ({ name, validated }) => {
+        // Toggle visuel
+        const rows = els.freeResultsList.querySelectorAll('.free-item');
+        rows.forEach(r => {
+          const who = r.querySelector('.free-who');
+          if (who && who.textContent === name) {
+            r.classList.toggle('validated', !!validated);
+          }
+        });
       });
 
       // Salle
       els.regenBtn.addEventListener('click', () => { room = generateRoomCode(5); renderInvite(); socket.emit('tv:create_room', room); });
 
-      // Buzzer actions
+      // Actions Jeux
       els.startRoundBtn.addEventListener('click', () => startCountdown(3, () => socket.emit('buzz:open')));
       els.resetRoundBtn.addEventListener('click', () => socket.emit('round:reset'));
       els.resetScoresBtn.addEventListener('click', () => socket.emit('scores:reset'));
 
-      // Banque quiz
+      // Quiz
       els.quizLoadBtn?.addEventListener('click', async () => {
         try {
           const res = await fetch('/questions.json', { cache: 'no-store' });
@@ -465,8 +509,6 @@
         els.quizQuestion.value = item.q || '';
         if (item.a) els.quizTrue.checked = true; else els.quizFalse.checked = true;
       });
-
-      // Quiz actions
       els.quizStartBtn.addEventListener('click', () => {
         const q = els.quizQuestion.value.trim();
         const correct = els.quizTrue.checked;
@@ -478,7 +520,7 @@
       });
       els.quizCloseBtn.addEventListener('click', () => socket.emit('quiz:close'));
 
-      // Banque guess
+      // Guess
       els.guessLoadBtn.addEventListener('click', async () => {
         try {
           const res = await fetch('/guess-questions.json', { cache: 'no-store' });
@@ -498,8 +540,6 @@
         els.guessMax.value = item.max ?? 100;
         els.guessSeconds.value = item.s ?? 8;
       });
-
-      // Guess actions
       els.guessStartBtn.addEventListener('click', () => {
         const q = els.guessQuestion.value.trim();
         if (!q) { alert('Entre une question'); return; }
@@ -512,6 +552,21 @@
         setTimeout(() => socket.emit('guess:close'), seconds * 1000);
       });
       els.guessCloseBtn.addEventListener('click', () => socket.emit('guess:close'));
+
+      // Free
+      els.freeStartBtn.addEventListener('click', () => {
+        const q = els.freeQuestion.value.trim();
+        const seconds = Math.max(5, Math.min(120, parseInt(els.freeSeconds.value || '30', 10)));
+        if (!q) { alert('Entre une question'); return; }
+        socket.emit('free:start', { question: q, seconds });
+        socket.emit('countdown:start', seconds);
+        els.freeInfo.textContent = `Question posée (${seconds}s)`;
+        setTimeout(() => socket.emit('free:close'), seconds * 1000);
+      });
+      els.freeCloseBtn.addEventListener('click', () => socket.emit('free:close'));
+      els.freeResultsCloseBtn.addEventListener('click', () => {
+        els.freeResultsOverlay.classList.remove('show');
+      });
     });
   </script>
 </body>

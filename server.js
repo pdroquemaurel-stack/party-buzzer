@@ -8,11 +8,14 @@ const { Server } = require('socket.io');
 const buzzerGame = require('./server/games/buzzer');
 const quizGame = require('./server/games/quiz');
 const guessGame = require('./server/games/guess');
+const freeGame = require('./server/games/free');
+
 
 const games = {
   buzzer: buzzerGame,
   quiz: quizGame,
-  guess: guessGame
+  guess: guessGame,
+  free : freeGame
 };
 
 const PORT = process.env.PORT || 3000;
@@ -296,6 +299,37 @@ socket.on('scores:adjust', ({ name, delta }) => {
     if (r.gameId !== 'guess') return;
     games.guess.adminClose(io, r, roomCode, broadcastPlayers);
   });
+
+
+  // REPOSNE LIBRE (free)
+  socket.on('free:start', ({ question, seconds }) => {
+    if (role !== 'tv' || !roomCode) return;
+    let r = getRoom(roomCode);
+    if (r.gameId !== 'free') r = ensureGame(roomCode, 'free');
+    games.free.adminStart(io, r, roomCode, { question, seconds });
+  });
+
+  socket.on('free:answer', ({ text }, ack) => {
+    if (!roomCode) { ack && ack({ ok: false }); return; }
+    const r = getRoom(roomCode);
+    if (r.gameId !== 'free') { ack && ack({ ok: false }); return; }
+    games.free.playerAnswer(io, r, roomCode, (playerName || 'Joueur'), text, ack);
+  });
+
+  socket.on('free:close', () => {
+    if (role !== 'tv' || !roomCode) return;
+    const r = getRoom(roomCode);
+    if (r.gameId !== 'free') return;
+    games.free.adminClose(io, r, roomCode);
+  });
+
+  socket.on('free:toggle_validate', ({ name }) => {
+    if (role !== 'tv' || !roomCode) return;
+    const r = getRoom(roomCode);
+    if (r.gameId !== 'free') return;
+    games.free.adminToggleValidate(io, r, roomCode, String(name || ''), broadcastPlayers);
+  });
+
 
   socket.on('disconnect', () => {
     if (!roomCode) return;

@@ -438,3 +438,29 @@ html, body, .tv-body { height: 100%; overflow: hidden; }
 
 /* Score: empêcher la colonne des contrôles de se coller */
 .score-controls { gap: .35rem; }
+
+/* ==== Réponse libre (overlay résultats) ==== */
+.free-list {
+  display: grid;
+  gap: .5rem;
+  max-height: 60vh;
+  overflow: auto;
+}
+.free-item {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: .6rem;
+  align-items: start;
+  padding: .6rem .7rem;
+  border: 2px solid rgba(255,255,255,.12);
+  border-radius: 12px;
+  background: rgba(255,255,255,.06);
+  cursor: pointer;
+}
+.free-item .free-who { font-weight: 800; }
+.free-item .free-text { white-space: pre-wrap; }
+.free-item.validated {
+  border-color: rgba(0,230,118,.9);
+  background: linear-gradient(180deg, rgba(0,230,118,.22), rgba(0,230,118,.12));
+  box-shadow: 0 0 0 3px rgba(0,230,118,.22) inset;
+}
