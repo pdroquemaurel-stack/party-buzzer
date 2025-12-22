@@ -464,3 +464,6 @@ html, body, .tv-body { height: 100%; overflow: hidden; }
   background: linear-gradient(180deg, rgba(0,230,118,.22), rgba(0,230,118,.12));
   box-shadow: 0 0 0 3px rgba(0,230,118,.22) inset;
 }
+
+/* Espace un peu plus large entre boutons dans panneaux */
+.btn-row { gap: .8rem; }
