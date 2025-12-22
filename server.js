@@ -6,11 +6,14 @@ const { Server } = require('socket.io');
 
 // Jeux (modules)
 const buzzerGame = require('./server/games/buzzer');
-const quizGame   = require('./server/games/quiz');
-const guessGame  = require('./server/games/guess');
-const triviaGame = require('./server/games/trivia');
+const quizGame = require('./server/games/quiz');
+const guessGame = require('./server/games/guess');
 
-const games = { buzzer: buzzerGame, quiz: quizGame, guess: guessGame, trivia: triviaGame };
+const games = {
+  buzzer: buzzerGame,
+  quiz: quizGame,
+  guess: guessGame
+};
 
 const PORT = process.env.PORT || 3000;
 const publicDir = path.join(__dirname, 'public');
@@ -78,13 +81,17 @@ function cleanName(name) {
   const n = String(name || '').replace(/[^a-zA-Z0-9 _.-]/g, '').trim().slice(0, 16);
   return n || 'Joueur';
 }
+
 function uniqueName(code, desired) {
   const r = getRoom(code);
-  let base = desired, name = base, i = 2;
+  let base = desired;
+  let name = base;
+  let i = 2;
   const taken = new Set(Array.from(r.players.values()).map(p => p.name));
   while (taken.has(name)) name = base + '#' + (i++);
   return name;
 }
+
 function broadcastPlayers(code) {
   const r = rooms.get(code);
   if (!r) return;
@@ -92,11 +99,13 @@ function broadcastPlayers(code) {
   r.scores.forEach((score, name) => listMap.set(name, { name, score, connected: false }));
   r.players.forEach(p => {
     const item = listMap.get(p.name) || { name: p.name, score: 0, connected: false };
-    item.connected = true; listMap.set(p.name, item);
+    item.connected = true;
+    listMap.set(p.name, item);
   });
-  const list = Array.from(listMap.values()).sort((a,b)=>(b.score-a.score)||a.name.localeCompare(b.name));
+  const list = Array.from(listMap.values()).sort((a, b) => (b.score - a.score) || a.name.localeCompare(b.name));
   io.to(code).emit('room:players', list);
 }
+
 function ensureGame(code, gameId) {
   const r = getRoom(code);
   const id = games[gameId] ? gameId : 'buzzer';
@@ -108,7 +117,9 @@ function ensureGame(code, gameId) {
 }
 
 io.on('connection', (socket) => {
-  let role = null, roomCode = null, playerName = null;
+  let role = null;
+  let roomCode = null;
+  let playerName = null;
 
   socket.on('tv:create_room', (code) => {
     roomCode = String(code || '').toUpperCase();
@@ -123,29 +134,33 @@ io.on('connection', (socket) => {
   socket.on('player:join', (payload, ack) => {
     const code = String(payload && payload.room || '').toUpperCase();
     const desired = cleanName(payload && payload.name);
-    if (!code || !desired) { ack && ack({ ok:false, error:'missing' }); return; }
+    if (!code || !desired) { ack && ack({ ok: false, error: 'missing' }); return; }
     const r = getRoom(code);
-    playerName = uniqueName(code, desired);
+    const finalName = uniqueName(code, desired);
+    playerName = finalName;
     roomCode = code;
-    r.players.set(socket.id, { name: playerName });
-    if (!r.scores.has(playerName)) r.scores.set(playerName, 0);
+    r.players.set(socket.id, { name: finalName });
+    if (!r.scores.has(finalName)) r.scores.set(finalName, 0);
     socket.join(code);
-    ack && ack({ ok: true, name: playerName });
+    ack && ack({ ok: true, name: finalName });
     socket.emit('mode:changed', { mode: r.gameId });
     broadcastPlayers(code);
   });
 
+  // Changement de jeu (TV)
   socket.on('mode:set', ({ mode }) => {
     if (role !== 'tv' || !roomCode) return;
     ensureGame(roomCode, mode);
   });
 
+  // Countdown (rebroadcast)
   socket.on('countdown:start', (seconds = 3) => {
     if (role !== 'tv' || !roomCode) return;
     const s = Math.max(1, Math.min(60, parseInt(seconds, 10) || 3));
     io.to(roomCode).emit('countdown:start', { seconds: s });
   });
 
+  // Reset tour/question générique (TV)
   socket.on('round:reset', () => {
     if (role !== 'tv' || !roomCode) return;
     const r = getRoom(roomCode);
@@ -153,105 +168,83 @@ io.on('connection', (socket) => {
     io.to(roomCode).emit('round:reset');
   });
 
+  // Reset scores (TV)
   socket.on('scores:reset', () => {
     if (role !== 'tv' || !roomCode) return;
     const r = getRoom(roomCode);
-    const m = new Map(); r.players.forEach(p => m.set(p.name, 0)); r.scores = m;
-    io.to(roomCode).emit('scores:reset'); broadcastPlayers(roomCode);
+    const newScores = new Map();
+    r.players.forEach(p => newScores.set(p.name, 0));
+    r.scores = newScores;
+    io.to(roomCode).emit('scores:reset');
+    broadcastPlayers(roomCode);
   });
 
   // BUZZER
   socket.on('buzz:open', () => {
     if (role !== 'tv' || !roomCode) return;
-    const r = getRoom(roomCode); if (r.gameId!=='buzzer') return;
+    const r = getRoom(roomCode);
+    if (r.gameId !== 'buzzer') return;
     games.buzzer.adminOpen(io, r, roomCode);
   });
+
   socket.on('buzz:press', (ack) => {
-    if (!roomCode) { ack&&ack({ok:false}); return; }
-    const r = getRoom(roomCode); if (r.gameId!=='buzzer') { ack&&ack({ok:false}); return; }
-    games.buzzer.playerPress(io, r, roomCode, (playerName||'Joueur'), ack, broadcastPlayers);
+    if (!roomCode) { ack && ack({ ok: false }); return; }
+    const r = getRoom(roomCode);
+    if (r.gameId !== 'buzzer') { ack && ack({ ok: false }); return; }
+    games.buzzer.playerPress(io, r, roomCode, (playerName || 'Joueur'), ack, broadcastPlayers);
   });
 
   // QUIZ
   socket.on('quiz:start', ({ question, correct, seconds }) => {
     if (role !== 'tv' || !roomCode) return;
-    let r = getRoom(roomCode); if (r.gameId!=='quiz') r = ensureGame(roomCode, 'quiz');
+    let r = getRoom(roomCode);
+    if (r.gameId !== 'quiz') r = ensureGame(roomCode, 'quiz');
     games.quiz.adminStart(io, r, roomCode, { question, correct, seconds });
   });
+
   socket.on('quiz:answer', ({ answer }, ack) => {
-    if (!roomCode) { ack&&ack({ok:false}); return; }
-    const r = getRoom(roomCode); if (r.gameId!=='quiz') { ack&&ack({ok:false}); return; }
-    games.quiz.playerAnswer(io, r, roomCode, (playerName||'Joueur'), !!answer, ack);
+    if (!roomCode) { ack && ack({ ok: false }); return; }
+    const r = getRoom(roomCode);
+    if (r.gameId !== 'quiz') { ack && ack({ ok: false }); return; }
+    games.quiz.playerAnswer(io, r, roomCode, (playerName || 'Joueur'), !!answer, ack);
   });
+
   socket.on('quiz:close', () => {
     if (role !== 'tv' || !roomCode) return;
-    const r = getRoom(roomCode); if (r.gameId!=='quiz') return;
+    const r = getRoom(roomCode);
+    if (r.gameId !== 'quiz') return;
     games.quiz.adminClose(io, r, roomCode, broadcastPlayers);
   });
 
-  // GUESS
+  // GUESS (Devine le nombre)
   socket.on('guess:start', ({ question, correct, min, max, seconds }) => {
     if (role !== 'tv' || !roomCode) return;
-    let r = getRoom(roomCode); if (r.gameId!=='guess') r = ensureGame(roomCode, 'guess');
+    let r = getRoom(roomCode);
+    if (r.gameId !== 'guess') r = ensureGame(roomCode, 'guess');
     games.guess.adminStart(io, r, roomCode, { question, correct, min, max, seconds });
   });
+
   socket.on('guess:answer', ({ value }, ack) => {
-    if (!roomCode) { ack&&ack({ok:false}); return; }
-    const r = getRoom(roomCode); if (r.gameId!=='guess') { ack&&ack({ok:false}); return; }
-    games.guess.playerAnswer(io, r, roomCode, (playerName||'Joueur'), value, ack);
+    if (!roomCode) { ack && ack({ ok: false }); return; }
+    const r = getRoom(roomCode);
+    if (r.gameId !== 'guess') { ack && ack({ ok: false }); return; }
+    games.guess.playerAnswer(io, r, roomCode, (playerName || 'Joueur'), value, ack);
   });
+
   socket.on('guess:close', () => {
     if (role !== 'tv' || !roomCode) return;
-    const r = getRoom(roomCode); if (r.gameId!=='guess') return;
+    const r = getRoom(roomCode);
+    if (r.gameId !== 'guess') return;
     games.guess.adminClose(io, r, roomCode, broadcastPlayers);
   });
-
-  // TRIVIA (Culture generale)
-socket.on('trivia:setup', ({ items, seconds }) => {
-  if (role !== 'tv' || !roomCode) return;
-  let r = getRoom(roomCode);
-  if (r.gameId !== 'trivia') r = ensureGame(roomCode, 'trivia');
-  games.trivia.adminSetup(io, r, roomCode, { items, seconds });
-});
-
-socket.on('trivia:start', () => {
-  if (role !== 'tv' || !roomCode) return;
-  const r = getRoom(roomCode);
-  if (r.gameId !== 'trivia') return;
-  games.trivia.adminStart(io, r, roomCode);
-});
-
-// Phase "ask": le serveur enchaîne; pas de 'close'/'next' émis par la TV
-
-// Phase "review" (après les 20 questions)
-socket.on('trivia:review_mark', ({ name, correct }) => {
-  if (role !== 'tv' || !roomCode) return;
-  const r = getRoom(roomCode);
-  if (r.gameId !== 'trivia') return;
-  games.trivia.reviewMark(io, r, roomCode, name, !!correct);
-});
-
-socket.on('trivia:review_next', () => {
-  if (role !== 'tv' || !roomCode) return;
-  const r = getRoom(roomCode);
-  if (r.gameId !== 'trivia') return;
-  games.trivia.reviewNext(io, r, roomCode);
-});
-
-// Réponse joueur (texte libre, dernière valeur retenue)
-socket.on('trivia:answer', ({ text }, ack) => {
-  if (!roomCode) { ack && ack({ ok: false }); return; }
-  const r = getRoom(roomCode);
-  if (r.gameId !== 'trivia') { ack && ack({ ok: false }); return; }
-  games.trivia.playerAnswer(io, r, roomCode, (playerName || 'Joueur'), String(text || ''));
-  ack && ack({ ok: true });
-});
-
 
   socket.on('disconnect', () => {
     if (!roomCode) return;
     const r = rooms.get(roomCode);
-    if (r) { r.players.delete(socket.id); broadcastPlayers(roomCode); }
+    if (r) {
+      r.players.delete(socket.id);
+      broadcastPlayers(roomCode);
+    }
   });
 });
 
