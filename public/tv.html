@@ -76,7 +76,7 @@
           <label><input type="radio" name="quizCorrect" id="quizTrue" value="true" checked /> Vrai</label>
           <label><input type="radio" name="quizCorrect" id="quizFalse" value="false" /> Faux</label>
         </div>
-        <div class="field">
+        <div class="field" style="max-width:220px;">
           <label>Durée (secondes)</label>
           <input id="quizSeconds" type="number" min="1" max="30" value="5" />
         </div>
@@ -147,13 +147,19 @@
           <label>Question</label>
           <input id="freeQuestion" type="text" placeholder="Ex: Écris une définition drôle de 'internet'." />
         </div>
-        <div class="field" style="max-width:220px;">
-          <label>Durée (secondes)</label>
-          <input id="freeSeconds" type="number" min="5" max="120" value="30" />
+        <div class="row btn-row" style="flex-wrap:wrap;">
+          <div class="field" style="min-width:160px; max-width:220px;">
+            <label>Durée (secondes)</label>
+            <input id="freeSeconds" type="number" min="5" max="180" value="30" />
+          </div>
+          <div class="field" style="min-width:160px; max-width:220px;">
+            <label>Questions dans la série</label>
+            <input id="freeSeriesCount" type="number" min="1" max="50" value="20" />
+          </div>
         </div>
         <div class="row btn-row">
           <button id="freeStartBtn" class="btn-green">Poser (3-2-1)</button>
-          <button id="freeSeriesBtn" class="btn-cyan">Lancer une série (20)</button>
+          <button id="freeSeriesBtn" class="btn-cyan">Lancer une série</button>
         </div>
         <div id="freeInfo" class="row hint"></div>
       </section>
@@ -194,7 +200,7 @@
     </div>
   </div>
 
-  <!-- Overlay Résultats single (Réponse libre) -->
+  <!-- Overlay Résultats single -->
   <div id="freeResultsOverlay" class="overlay">
     <div style="max-width: 1000px; width: 92vw; text-align: left;">
       <div class="label" style="text-align:center;">Réponses</div>
@@ -210,7 +216,7 @@
     <div style="max-width: 1100px; width: 94vw;">
       <div class="row" style="justify-content:space-between; align-items:center;">
         <div class="label">Correction — <span id="freeReviewPosition">1/20</span></div>
-        <div>
+        <div class="btn-row">
           <button id="freeReviewPrevBtn">Précédent</button>
           <button id="freeReviewNextBtn" class="btn-green">Suivant</button>
           <button id="freeReviewCloseBtn" class="btn-cyan">Terminer</button>
@@ -303,6 +309,7 @@
       freeLoadedInfo: document.getElementById('freeLoadedInfo'),
       freeQuestion: document.getElementById('freeQuestion'),
       freeSeconds: document.getElementById('freeSeconds'),
+      freeSeriesCount: document.getElementById('freeSeriesCount'),
       freeStartBtn: document.getElementById('freeStartBtn'),
       freeSeriesBtn: document.getElementById('freeSeriesBtn'),
       freeInfo: document.getElementById('freeInfo'),
@@ -373,14 +380,14 @@
     function stopCountdownUI() { if (cdTimer) { clearInterval(cdTimer); cdTimer = null; } els.countdown.classList.remove('show'); }
     function startCountdown(sec = 3, onEnd) {
       stopCountdownUI();
-      els.countNum.textContent = sec;
+      document.getElementById('countNum').textContent = sec;
       els.countdown.classList.add('show');
       socket.emit('countdown:start', sec);
       playBeep(700, 120);
       let remain = sec;
       cdTimer = setInterval(() => {
         remain--;
-        if (remain > 0) { els.countNum.textContent = remain; playBeep(700, 120); }
+        if (remain > 0) { document.getElementById('countNum').textContent = remain; playBeep(700, 120); }
         else { stopCountdownUI(); playBeep(1200, 200); if (typeof onEnd === 'function') onEnd(); }
       }, 1000);
     }
@@ -432,39 +439,30 @@
       els.guessScale.innerHTML = `<span>${prog.min}</span><span>${prog.max}</span>`;
     }
 
-    // Free: Série — état local TV
-    let freeSeries = { items: [], idx: -1, total: 0, timerId: null };
-
-    function pickRandomFreeItems(src, n = 20) {
+    // Free: Série — helpers
+    function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
+    function pickRandomFreeItems(src, amount, secondsOverride) {
       if (!Array.isArray(src) || src.length === 0) return [];
       const arr = src.slice();
-      const out = [];
-      // mélange simple
+      // shuffle
       for (let i = arr.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [arr[i], arr[j]] = [arr[j], arr[i]];
       }
-      for (let i = 0; i < n; i++) out.push(arr[i % arr.length]);
-      return out.slice(0, n);
+      const n = clamp(amount || 20, 1, 50);
+      const out = [];
+      for (let i = 0; i < n; i++) {
+        const srcItem = arr[i % arr.length];
+        out.push({ q: srcItem.q, s: secondsOverride || srcItem.s || 30 });
+      }
+      return out;
     }
 
     function startFreeSeries(items) {
-      freeSeries.items = items;
-      freeSeries.idx = -1;
-      freeSeries.total = items.length;
-      // Init serveur
       socket.emit('free:series:start', { items });
-      // Demander la première question
-      nextFreeSeriesQuestion();
-    }
-
-    function nextFreeSeriesQuestion() {
-      socket.emit('free:series:next_question');
-      // Le serveur émettra free:question avec index+seconds; on gère le décompte ici
-    }
-
-    function finishFreeSeries() {
-      socket.emit('free:series:finish');
+      // Le serveur pilotera chaque question via free:question,
+      // on enchaîne côté TV en écoutant cet événement et en planifiant la suivante.
+      // Pas besoin d’état local ici.
     }
 
     window.addEventListener('DOMContentLoaded', function () {
@@ -499,7 +497,7 @@
       els.quizLoadBtn?.addEventListener('click', async () => {
         try {
           const res = await fetch('/questions.json', { cache: 'no-store' });
-          const data = await res.json();
+        const data = await res.json();
           if (!Array.isArray(data)) throw new Error('Format invalide');
           questionBankQuiz = data;
           els.quizLoadedInfo.textContent = `${questionBankQuiz.length} question(s) chargée(s).`;
@@ -521,8 +519,6 @@
         setTimeout(() => socket.emit('quiz:close'), seconds * 1000);
       });
       els.quizCloseBtn.addEventListener('click', () => socket.emit('quiz:close'));
-      socket.on('quiz:question', ({ question, seconds }) => { setModeUI('quiz'); els.quizInfo.textContent = `Question en cours (${seconds}s): "${question}"`; showQuestionOverlay(question, seconds, false); });
-      socket.on('quiz:result', ({ correct, countTrue, countFalse, total }) => { hideQuestionOverlay(); const txt = correct ? 'Vrai' : 'Faux'; els.quizInfo.textContent = `Bonne réponse: ${txt} — Vrai: ${countTrue}, Faux: ${countFalse}, Total: ${total}`; });
 
       // Guess
       els.guessLoadBtn.addEventListener('click', async () => {
@@ -601,7 +597,7 @@
       // Free: single
       els.freeStartBtn.addEventListener('click', () => {
         const q = els.freeQuestion.value.trim();
-        const seconds = Math.max(5, Math.min(120, parseInt(els.freeSeconds.value || '30', 10)));
+        const seconds = Math.max(5, Math.min(180, parseInt(els.freeSeconds.value || '30', 10)));
         if (!q) { alert('Entre une question'); return; }
         socket.emit('free:start', { question: q, seconds });
         socket.emit('countdown:start', seconds);
@@ -609,10 +605,12 @@
         setTimeout(() => socket.emit('free:close'), seconds * 1000);
       });
 
-      // Free: série (20)
+      // Free: série avec nombre et durée fixés
       els.freeSeriesBtn.addEventListener('click', () => {
         if (!questionBankFree.length) { alert('Charge d’abord la banque de questions'); return; }
-        const items = pickRandomFreeItems(questionBankFree, 20).map(it => ({ q: it.q, s: it.s || 30 }));
+        const count = Math.max(1, Math.min(50, parseInt(els.freeSeriesCount.value || '20', 10)));
+        const seconds = Math.max(5, Math.min(180, parseInt(els.freeSeconds.value || '30', 10)));
+        const items = pickRandomFreeItems(questionBankFree, count, seconds);
         startFreeSeries(items);
       });
 
@@ -622,28 +620,24 @@
         els.freeInfo.textContent = index != null ? `Question ${index + 1}/${total} en cours (${seconds}s)` : `Question en cours (${seconds}s)`;
         showQuestionOverlay(question, seconds, true);
 
-        // Si c'est une série, enchaîner automatiquement vers la suivante
         if (index != null && total != null) {
-          // Lance un countdown côté TV pour feedback; à l'expiration, on cache et demande la suivante
           setTimeout(() => {
             hideQuestionOverlay();
-            // petite pause 400ms entre questions
-            setTimeout(() => nextFreeSeriesQuestion(), 400);
+            setTimeout(() => socket.emit('free:series:next_question'), 400);
           }, seconds * 1000);
-        } else {
-          // single -> la TV clora en free:close
         }
       });
 
       // Free: single - résultats
       socket.on('free:results', ({ question, items }) => {
         hideQuestionOverlay();
-        els.freeResultsList.innerHTML = '';
+        const list = document.getElementById('freeResultsList');
+        list.innerHTML = '';
         const title = document.createElement('div');
         title.className = 'hint';
         title.style.marginBottom = '.6rem';
         title.textContent = `Question: ${question}`;
-        els.freeResultsList.appendChild(title);
+        list.appendChild(title);
 
         (items || []).forEach(item => {
           const row = document.createElement('div');
@@ -652,26 +646,26 @@
           const text = document.createElement('div'); text.className = 'free-text'; text.textContent = item.text || '';
           row.appendChild(who); row.appendChild(text);
           row.addEventListener('click', () => { socket.emit('free:toggle_validate', { name: item.name }); });
-          els.freeResultsList.appendChild(row);
+          list.appendChild(row);
         });
 
-        els.freeResultsOverlay.classList.add('show');
+        document.getElementById('freeResultsOverlay').classList.add('show');
       });
       socket.on('free:validated', ({ name, validated }) => {
-        const rows = els.freeResultsList.querySelectorAll('.free-item');
+        const rows = document.getElementById('freeResultsList').querySelectorAll('.free-item');
         rows.forEach(r => {
           const who = r.querySelector('.free-who');
           if (who && who.textContent === name) r.classList.toggle('validated', !!validated);
         });
       });
-      els.freeResultsCloseBtn.addEventListener('click', () => { els.freeResultsOverlay.classList.remove('show'); });
+      document.getElementById('freeResultsCloseBtn').addEventListener('click', () => { document.getElementById('freeResultsOverlay').classList.remove('show'); });
 
       // Free: review série
       socket.on('free:review_open', ({ index, total, question, items }) => {
-        els.freeReviewPosition.textContent = `${index + 1}/${total}`;
-        els.freeReviewQuestion.textContent = question;
-        els.freeReviewList.innerHTML = '';
-
+        document.getElementById('freeReviewPosition').textContent = `${index + 1}/${total}`;
+        document.getElementById('freeReviewQuestion').textContent = question;
+        const list = document.getElementById('freeReviewList');
+        list.innerHTML = '';
         (items || []).forEach(item => {
           const row = document.createElement('div');
           row.className = 'free-item' + (item.validated ? ' validated' : '');
@@ -679,31 +673,31 @@
           const text = document.createElement('div'); text.className = 'free-text'; text.textContent = item.text || '';
           row.appendChild(who); row.appendChild(text);
           row.addEventListener('click', () => { socket.emit('free:toggle_validate', { name: item.name }); });
-          els.freeReviewList.appendChild(row);
+          list.appendChild(row);
         });
 
-        els.freeReviewOverlay.classList.add('show');
+        document.getElementById('freeReviewOverlay').classList.add('show');
       });
       socket.on('free:review_validated', ({ name, validated }) => {
-        const rows = els.freeReviewList.querySelectorAll('.free-item');
+        const rows = document.getElementById('freeReviewList').querySelectorAll('.free-item');
         rows.forEach(r => {
           const who = r.querySelector('.free-who');
           if (who && who.textContent === name) r.classList.toggle('validated', !!validated);
         });
       });
 
-      els.freeReviewPrevBtn.addEventListener('click', () => {
-        const pos = els.freeReviewPosition.textContent.split('/').map(x => parseInt(x, 10));
-        const idx = Math.max(0, (pos[0] || 1) - 2); // -1 pour 0-index, encore -1 pour précédent
+      document.getElementById('freeReviewPrevBtn').addEventListener('click', () => {
+        const pos = document.getElementById('freeReviewPosition').textContent.split('/').map(x => parseInt(x, 10));
+        const idx = Math.max(0, (pos[0] || 1) - 2);
         socket.emit('free:series:goto_index', { index: idx });
       });
-      els.freeReviewNextBtn.addEventListener('click', () => {
-        const pos = els.freeReviewPosition.textContent.split('/').map(x => parseInt(x, 10));
-        const idx = Math.min((pos[1] || 1) - 1, (pos[0] || 1)); // avancer d'une question
+      document.getElementById('freeReviewNextBtn').addEventListener('click', () => {
+        const pos = document.getElementById('freeReviewPosition').textContent.split('/').map(x => parseInt(x, 10));
+        const idx = Math.min((pos[1] || 1) - 1, (pos[0] || 1));
         socket.emit('free:series:goto_index', { index: idx });
       });
-      els.freeReviewCloseBtn.addEventListener('click', () => {
-        els.freeReviewOverlay.classList.remove('show');
+      document.getElementById('freeReviewCloseBtn').addEventListener('click', () => {
+        document.getElementById('freeReviewOverlay').classList.remove('show');
       });
 
       // Salle
