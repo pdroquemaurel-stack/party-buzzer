@@ -54,18 +54,19 @@ GameRegistry.register('free', {
         setTimeout(() => Core.socket.emit('free:close'), seconds * 1000);
       });
 
-      randAskBtn.addEventListener('click', () => {
+           randAskBtn.addEventListener('click', () => {
         if (!bank.length) { alert('Charge la banque'); return; }
         const item = bank[Math.floor(Math.random() * bank.length)];
         const q = item.q || '';
+        if (!q) return;
         const seconds = Math.max(5, Math.min(180, parseInt(sInput.value || (item.s || '30'), 10)));
         const a = item.a || '';
-        if (!q) return;
         Core.socket.emit('free:start', { question: q, seconds, answer: a });
         Core.socket.emit('countdown:start', seconds);
         info.textContent = `Question posée (${seconds}s)`;
         setTimeout(() => Core.socket.emit('free:close'), seconds * 1000);
       });
+
 
       seriesBtn.addEventListener('click', () => {
         if (!bank.length) { alert('Charge la banque'); return; }
@@ -97,11 +98,10 @@ GameRegistry.register('free', {
   },
 
   onQuestion(payload) {
-    if (payload.phase === 'review') {
+        if (payload.phase === 'review') {
       Core.els.freeReviewPosition.textContent = `${payload.index + 1}/${payload.total}`;
       Core.els.freeReviewQuestion.textContent = payload.question;
 
-      // Afficher la bonne réponse (expected) sous la question
       let expectedEl = document.getElementById('freeReviewExpected');
       if (!expectedEl) {
         expectedEl = document.createElement('div');
@@ -127,6 +127,7 @@ GameRegistry.register('free', {
       return;
     }
 
+
     const freeInfo = document.getElementById('freeInfo');
     if (typeof payload.index === 'number' && typeof payload.total === 'number') {
       freeInfo.textContent = `Question ${payload.index + 1}/${payload.total} en cours (${payload.seconds}s)`;
@@ -148,11 +149,10 @@ GameRegistry.register('free', {
     });
   },
 
-  onResult({ question, expected, items }) {
+   onResult({ question, expected, items }) {
     const list = Core.els.freeResultsList;
     list.innerHTML = '';
 
-    // En-tête question + bonne réponse
     const title = document.createElement('div');
     title.className = 'hint';
     title.style.marginBottom = '.35rem';
@@ -177,6 +177,7 @@ GameRegistry.register('free', {
 
     Core.els.freeResultsOverlay.classList.add('show');
   },
+
 
   onClose() {}
 });
