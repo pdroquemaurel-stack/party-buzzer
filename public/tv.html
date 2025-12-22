@@ -11,7 +11,7 @@
     <header class="tv-header card">
       <div class="tv-header-left"><h1 style="margin:0;">Party Buzzer</h1></div>
       <div class="tv-header-right">
-        <div class="mode-switch">
+        <div class="mode-switch" id="modeSwitch">
           <label class="mode-pill"><input type="radio" name="mode" value="buzzer" checked /> Buzzer</label>
           <label class="mode-pill"><input type="radio" name="mode" value="quiz" /> Quiz V/F</label>
           <label class="mode-pill"><input type="radio" name="mode" value="guess" /> Devine</label>
@@ -48,7 +48,7 @@
     <!-- Centre -->
     <section class="tv-center">
       <!-- Buzzer -->
-      <section id="buzzerPanel" class="card">
+      <section id="buzzerPanel" class="card" data-game-panel="buzzer">
         <h2>Buzzer</h2>
         <div class="row btn-row">
           <button id="startRoundBtn" class="btn-green">Démarrer le tour</button>
@@ -57,7 +57,7 @@
       </section>
 
       <!-- Quiz -->
-      <section id="quizPanel" class="card" style="display:none;">
+      <section id="quizPanel" class="card" style="display:none;" data-game-panel="quiz">
         <h2>Quiz Vrai/Faux</h2>
         <div class="card soft">
           <h3 style="margin-top:0;">Banque de questions</h3>
@@ -87,7 +87,7 @@
       </section>
 
       <!-- Devine -->
-      <section id="guessPanel" class="card" style="display:none;">
+      <section id="guessPanel" class="card" style="display:none;" data-game-panel="guess">
         <h2>Devine le nombre</h2>
         <div class="card soft">
           <h3 style="margin-top:0;">Banque</h3>
@@ -132,7 +132,7 @@
       </section>
 
       <!-- Réponse libre -->
-      <section id="freePanel" class="card" style="display:none;">
+      <section id="freePanel" class="card" style="display:none;" data-game-panel="free">
         <h2>Réponse libre</h2>
         <div class="card soft">
           <h3 style="margin-top:0;">Banque</h3>
@@ -176,7 +176,7 @@
     </aside>
   </main>
 
-  <!-- Overlays -->
+  <!-- Overlays globaux -->
   <div id="overlay" class="overlay" onclick="this.classList.remove('show')">
     <div>
       <div class="label">Gagnant</div>
@@ -192,7 +192,6 @@
     </div>
   </div>
 
-  <!-- Overlay Question (Quiz/Guess/Free) -->
   <div id="quizQOverlay" class="overlay">
     <div>
       <div class="label">Question</div>
@@ -202,7 +201,6 @@
     </div>
   </div>
 
-  <!-- Overlay Résultats single -->
   <div id="freeResultsOverlay" class="overlay">
     <div style="max-width: 1000px; width: 92vw; text-align: left;">
       <div class="label" style="text-align:center;">Réponses</div>
@@ -213,7 +211,6 @@
     </div>
   </div>
 
-  <!-- Overlay Correction Série -->
   <div id="freeReviewOverlay" class="overlay">
     <div style="max-width: 1100px; width: 94vw;">
       <div class="row" style="justify-content:space-between; align-items:center;">
@@ -230,469 +227,10 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script>
-    function generateRoomCode(len) {
-      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-      let out = '';
-      for (let i = 0; i < len; i++) out += chars[Math.floor(Math.random() * chars.length)];
-      return out;
-    }
-    function playBeep(freq = 880, durMs = 120) {
-      try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const o = ctx.createOscillator();
-        const g = ctx.createGain();
-        o.type = 'sine'; o.frequency.value = freq;
-        o.connect(g); g.connect(ctx.destination);
-        g.gain.setValueAtTime(0.001, ctx.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.02);
-        o.start();
-        setTimeout(() => {
-          g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.1);
-          o.stop(ctx.currentTime + 0.12);
-        }, durMs);
-      } catch {}
-    }
-
-    const els = {
-      // Salle
-      roomCode: document.getElementById('roomCode'),
-      qr: document.getElementById('qr'),
-      qrLink: document.getElementById('qrLink'),
-      regenBtn: document.getElementById('regenBtn'),
-
-      // Scores
-      players: document.getElementById('players'),
-      resetScoresBtn: document.getElementById('resetScoresBtn'),
-
-      // Status + countdown
-      status: document.getElementById('status'),
-      overlay: document.getElementById('overlay'),
-      countdown: document.getElementById('countdown'),
-      countNum: document.getElementById('countNum'),
-      winnerName: document.getElementById('winnerName'),
-
-      // Mode + panneaux
-      modeRadios: document.getElementsByName('mode'),
-      buzzerPanel: document.getElementById('buzzerPanel'),
-      quizPanel: document.getElementById('quizPanel'),
-      guessPanel: document.getElementById('guessPanel'),
-      freePanel: document.getElementById('freePanel'),
-
-      // Quiz
-      quizLoadBtn: document.getElementById('quizLoadBtn'),
-      quizRandomBtn: document.getElementById('quizRandomBtn'),
-      quizLoadedInfo: document.getElementById('quizLoadedInfo'),
-      quizQuestion: document.getElementById('quizQuestion'),
-      quizTrue: document.getElementById('quizTrue'),
-      quizFalse: document.getElementById('quizFalse'),
-      quizSeconds: document.getElementById('quizSeconds'),
-      quizStartBtn: document.getElementById('quizStartBtn'),
-      quizCloseBtn: document.getElementById('quizCloseBtn'),
-      quizInfo: document.getElementById('quizInfo'),
-
-      // Guess
-      guessLoadBtn: document.getElementById('guessLoadBtn'),
-      guessRandomBtn: document.getElementById('guessRandomBtn'),
-      guessLoadedInfo: document.getElementById('guessLoadedInfo'),
-      guessQuestion: document.getElementById('guessQuestion'),
-      guessCorrect: document.getElementById('guessCorrect'),
-      guessMin: document.getElementById('guessMin'),
-      guessMax: document.getElementById('guessMax'),
-      guessSeconds: document.getElementById('guessSeconds'),
-      guessStartBtn: document.getElementById('guessStartBtn'),
-      guessCloseBtn: document.getElementById('guessCloseBtn'),
-      guessInfo: document.getElementById('guessInfo'),
-      guessChart: document.getElementById('guessChart'),
-      guessScale: document.getElementById('guessScale'),
-
-      // Free
-      freeLoadBtn: document.getElementById('freeLoadBtn'),
-      freeRandomBtn: document.getElementById('freeRandomBtn'),
-      freeLoadedInfo: document.getElementById('freeLoadedInfo'),
-      freeQuestion: document.getElementById('freeQuestion'),
-      freeSeconds: document.getElementById('freeSeconds'),
-      freeSeriesCount: document.getElementById('freeSeriesCount'),
-      freeStartBtn: document.getElementById('freeStartBtn'),
-      freeSeriesBtn: document.getElementById('freeSeriesBtn'),
-      freeInfo: document.getElementById('freeInfo'),
-
-      // Overlays question et résultats / review
-      quizQOverlay: document.getElementById('quizQOverlay'),
-      quizQText: document.getElementById('quizQText'),
-      quizTimer: document.getElementById('quizTimer'),
-      freeHint: document.getElementById('freeHint'),
-
-      freeResultsOverlay: document.getElementById('freeResultsOverlay'),
-      freeResultsList: document.getElementById('freeResultsList'),
-      freeResultsCloseBtn: document.getElementById('freeResultsCloseBtn'),
-
-      freeReviewOverlay: document.getElementById('freeReviewOverlay'),
-      freeReviewPosition: document.getElementById('freeReviewPosition'),
-      freeReviewQuestion: document.getElementById('freeReviewQuestion'),
-      freeReviewList: document.getElementById('freeReviewList'),
-      freeReviewPrevBtn: document.getElementById('freeReviewPrevBtn'),
-      freeReviewNextBtn: document.getElementById('freeReviewNextBtn'),
-      freeReviewCloseBtn: document.getElementById('freeReviewCloseBtn'),
-
-      // Buzzer actions
-      startRoundBtn: document.getElementById('startRoundBtn'),
-      resetRoundBtn: document.getElementById('resetRoundBtn')
-    };
-
-    const socket = io();
-    let room = generateRoomCode(5);
-
-    let cdTimer = null;
-    let quizTimer = null;
-    let questionBankQuiz = [];
-    let questionBankGuess = [];
-    let questionBankFree = [];
-
-    const FIXED_BASE = 'https://party-buzzer.onrender.com';
-    function buildJoinUrl() { return FIXED_BASE + '/join?room=' + encodeURIComponent(room); }
-    function renderInvite() {
-      els.roomCode.textContent = room;
-      const joinUrl = buildJoinUrl();
-      els.qrLink.href = joinUrl;
-      const qrApi = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=';
-      els.qr.src = qrApi + encodeURIComponent(joinUrl);
-    }
-
-    function renderPlayers(list) {
-      els.players.innerHTML = '';
-      (list || []).forEach(p => {
-        const li = document.createElement('li');
-        li.className = 'score-item';
-        const name = document.createElement('div'); name.className = 'score-name'; name.textContent = p.name;
-        const score = document.createElement('div'); score.className = 'score-value'; score.textContent = p.score;
-        const controls = document.createElement('div'); controls.className = 'score-controls';
-        const btnPlus = document.createElement('button'); btnPlus.className = 'score-btn plus'; btnPlus.textContent = '▲';
-        btnPlus.addEventListener('click', () => { score.textContent = String((parseInt(score.textContent||'0',10)||0)+1); socket.emit('scores:adjust', { name: p.name, delta: +1 }); });
-        const btnMinus = document.createElement('button'); btnMinus.className = 'score-btn minus'; btnMinus.textContent = '▼';
-        btnMinus.addEventListener('click', () => { score.textContent = String((parseInt(score.textContent||'0',10)||0)-1); socket.emit('scores:adjust', { name: p.name, delta: -1 }); });
-        controls.appendChild(btnPlus); controls.appendChild(btnMinus);
-        li.appendChild(name); li.appendChild(score); li.appendChild(controls);
-        els.players.appendChild(li);
-      });
-    }
-
-    function setStatus(text) { els.status.textContent = text || ''; }
-
-    function stopCountdownUI() { if (cdTimer) { clearInterval(cdTimer); cdTimer = null; } els.countdown.classList.remove('show'); }
-    function startCountdown(sec = 3, onEnd) {
-      stopCountdownUI();
-      document.getElementById('countNum').textContent = sec;
-      els.countdown.classList.add('show');
-      socket.emit('countdown:start', sec);
-      playBeep(700, 120);
-      let remain = sec;
-      cdTimer = setInterval(() => {
-        remain--;
-        if (remain > 0) { document.getElementById('countNum').textContent = remain; playBeep(700, 120); }
-        else { stopCountdownUI(); playBeep(1200, 200); if (typeof onEnd === 'function') onEnd(); }
-      }, 1000);
-    }
-
-    function showQuestionOverlay(question, seconds, showFreeHint = false) {
-      if (quizTimer) { clearInterval(quizTimer); quizTimer = null; }
-      els.quizQText.textContent = question;
-      let remain = seconds || 5;
-      els.quizTimer.textContent = `Temps restant: ${remain}s`;
-      els.freeHint.style.display = showFreeHint ? 'block' : 'none';
-      els.quizQOverlay.classList.add('show');
-      quizTimer = setInterval(() => {
-        remain--;
-        if (remain > 0) els.quizTimer.textContent = `Temps restant: ${remain}s`;
-        else { clearInterval(quizTimer); quizTimer = null; }
-      }, 1000);
-    }
-    function hideQuestionOverlay() {
-      if (quizTimer) { clearInterval(quizTimer); quizTimer = null; }
-      els.quizQOverlay.classList.remove('show');
-      els.quizTimer.textContent = '';
-      els.freeHint.style.display = 'none';
-    }
-
-    function setModeUI(mode) {
-      els.buzzerPanel.style.display = (mode === 'buzzer') ? '' : 'none';
-      els.quizPanel.style.display = (mode === 'quiz') ? '' : 'none';
-      els.guessPanel.style.display = (mode === 'guess') ? '' : 'none';
-      els.freePanel.style.display = (mode === 'free') ? '' : 'none';
-      for (const r of els.modeRadios) r.checked = (r.value === mode);
-    }
-
-    function renderGuessChart(prog) {
-      els.guessChart.innerHTML = '';
-      if (!prog || !Array.isArray(prog.bins) || prog.bins.length === 0) return;
-      const maxCount = Math.max(1, ...prog.bins.map(b => b.count));
-      prog.bins.forEach(b => {
-        const bar = document.createElement('div');
-        bar.className = 'bar';
-        const h = Math.round((b.count / maxCount) * 100);
-        bar.style.height = (h || 2) + '%';
-        bar.title = `${b.from}–${b.to}: ${b.count}`;
-        const label = document.createElement('div');
-        label.className = 'bar-label';
-        label.textContent = b.count ? b.count : '';
-        bar.appendChild(label);
-        els.guessChart.appendChild(bar);
-      });
-      els.guessScale.innerHTML = `<span>${prog.min}</span><span>${prog.max}</span>`;
-    }
-
-    // Helpers Free
-    function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
-    function pickRandomFreeItems(src, amount, secondsOverride) {
-      if (!Array.isArray(src) || src.length === 0) return [];
-      const arr = src.slice();
-      for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
-      const n = clamp(amount || 20, 1, 50);
-      const out = [];
-      for (let i = 0; i < n; i++) {
-        const srcItem = arr[i % arr.length];
-        out.push({ q: srcItem.q, s: secondsOverride || srcItem.s || 30 });
-      }
-      return out;
-    }
-
-    window.addEventListener('DOMContentLoaded', function () {
-      renderInvite();
-      socket.emit('tv:create_room', room);
-
-      // Radios mode -> serveur
-      for (const r of els.modeRadios) r.addEventListener('change', () => { if (r.checked) socket.emit('mode:set', { mode: r.value }); });
-
-      // Commun
-      socket.on('mode:changed', ({ mode }) => {
-        setModeUI(mode);
-        els.overlay.classList.remove('show');
-        hideQuestionOverlay();
-        els.quizInfo && (els.quizInfo.textContent = '');
-        els.guessInfo && (els.guessInfo.textContent = '');
-        els.freeInfo && (els.freeInfo.textContent = '');
-        setStatus(mode === 'buzzer' ? 'Mode Buzzer' : mode === 'quiz' ? 'Mode Quiz' : mode === 'guess' ? 'Mode Devine' : 'Mode Réponse libre');
-      });
-      socket.on('room:players', renderPlayers);
-      socket.on('scores:reset', () => setStatus('Scores réinitialisés'));
-      socket.on('round:reset', () => { els.overlay.classList.remove('show'); hideQuestionOverlay(); setStatus('Tour/Question réinitialisé.'); });
-
-      // Buzzer
-      els.startRoundBtn.addEventListener('click', () => startCountdown(3, () => socket.emit('buzz:open')));
-      els.resetRoundBtn.addEventListener('click', () => socket.emit('round:reset'));
-
-      // Quiz
-      els.quizLoadBtn?.addEventListener('click', async () => {
-        try {
-          const res = await fetch('/questions.json', { cache: 'no-store' });
-          const data = await res.json();
-          if (!Array.isArray(data)) throw new Error('Format invalide');
-          questionBankQuiz = data;
-          els.quizLoadedInfo.textContent = `${questionBankQuiz.length} question(s) chargée(s).`;
-          els.quizRandomBtn.disabled = questionBankQuiz.length === 0;
-        } catch { alert('Impossible de charger /questions.json'); questionBankQuiz = []; els.quizLoadedInfo.textContent=''; els.quizRandomBtn.disabled = true; }
-      });
-      els.quizRandomBtn?.addEventListener('click', () => {
-        if (!questionBankQuiz.length) return;
-        const item = questionBankQuiz[Math.floor(Math.random() * questionBankQuiz.length)];
-        els.quizQuestion.value = item.q || '';
-        if (item.a) els.quizTrue.checked = true; else els.quizFalse.checked = true;
-      });
-      els.quizStartBtn.addEventListener('click', () => {
-        const q = els.quizQuestion.value.trim();
-        const seconds = Math.max(1, Math.min(30, parseInt(els.quizSeconds.value || '5', 10)));
-        if (!q) { alert('Entre une question'); return; }
-        socket.emit('quiz:start', { question: q, correct: els.quizTrue.checked, seconds });
-        socket.emit('countdown:start', seconds);
-        setTimeout(() => socket.emit('quiz:close'), seconds * 1000);
-      });
-      els.quizCloseBtn.addEventListener('click', () => socket.emit('quiz:close'));
-      socket.on('quiz:question', ({ question, seconds }) => { setModeUI('quiz'); els.quizInfo.textContent = `Question en cours (${seconds}s): "${question}"`; showQuestionOverlay(question, seconds, false); });
-      socket.on('quiz:result', ({ correct, countTrue, countFalse, total }) => { hideQuestionOverlay(); const txt = correct ? 'Vrai' : 'Faux'; els.quizInfo.textContent = `Bonne réponse: ${txt} — Vrai: ${countTrue}, Faux: ${countFalse}, Total: ${total}`; });
-
-      // Guess
-      els.guessLoadBtn.addEventListener('click', async () => {
-        try {
-          const res = await fetch('/guess-questions.json', { cache: 'no-store' });
-          const data = await res.json();
-          if (!Array.isArray(data)) throw new Error('Format invalide');
-          questionBankGuess = data;
-          els.guessLoadedInfo.textContent = `${questionBankGuess.length} question(s) chargée(s).`;
-          els.guessRandomBtn.disabled = questionBankGuess.length === 0;
-        } catch { alert('Impossible de charger /guess-questions.json'); questionBankGuess = []; els.guessLoadedInfo.textContent=''; els.guessRandomBtn.disabled = true; }
-      });
-      els.guessRandomBtn.addEventListener('click', () => {
-        if (!questionBankGuess.length) return;
-        const item = questionBankGuess[Math.floor(Math.random() * questionBankGuess.length)];
-        els.guessQuestion.value = item.q || '';
-        els.guessCorrect.value = item.c ?? '';
-        els.guessMin.value = item.min ?? 0;
-        els.guessMax.value = item.max ?? 100;
-        els.guessSeconds.value = item.s ?? 8;
-      });
-      els.guessStartBtn.addEventListener('click', () => {
-        const q = els.guessQuestion.value.trim();
-        if (!q) { alert('Entre une question'); return; }
-        const correct = parseInt(els.guessCorrect.value || '0', 10);
-        const min = parseInt(els.guessMin.value || '0', 10);
-        const max = parseInt(els.guessMax.value || '100', 10);
-        const seconds = Math.max(1, Math.min(60, parseInt(els.guessSeconds.value || '8', 10)));
-        socket.emit('guess:start', { question: q, correct, min, max, seconds });
-        socket.emit('countdown:start', seconds);
-        setTimeout(() => socket.emit('guess:close'), seconds * 1000);
-      });
-      els.guessCloseBtn.addEventListener('click', () => socket.emit('guess:close'));
-      socket.on('guess:start', ({ question, min, max, seconds }) => {
-        setModeUI('guess');
-        els.guessInfo.textContent = `Question en cours (${seconds}s) — Intervalle: ${min} à ${max}`;
-        showQuestionOverlay(question, seconds, false);
-        els.guessChart.innerHTML = '';
-        els.guessScale.innerHTML = `<span>${min}</span><span>${max}</span>`;
-      });
-      socket.on('guess:progress', (prog) => { renderGuessChart(prog); });
-      socket.on('guess:result', ({ correct, winners, bestDiff, tol }) => {
-        hideQuestionOverlay();
-        const maxShow = 5;
-        const names = winners || [];
-        const shown = names.slice(0, maxShow).join(', ');
-        const more = names.length > maxShow ? ` (+${names.length - maxShow})` : '';
-        const who = names.length ? shown + more : 'Aucun';
-        const detail = (bestDiff === null) ? '' : ` — meilleur écart: ${bestDiff}${tol ? `, tolérance≈±${tol}` : ''}`;
-        els.guessInfo.textContent = `Réponse: ${correct} — Gagnants: ${who}${detail}`;
-      });
-
-      // Free: banque
-      els.freeLoadBtn.addEventListener('click', async () => {
-        try {
-          const res = await fetch('/free-questions.json', { cache: 'no-store' });
-          const data = await res.json();
-          if (!Array.isArray(data)) throw new Error('Format invalide');
-          questionBankFree = data;
-          els.freeLoadedInfo.textContent = `${questionBankFree.length} question(s) chargée(s).`;
-          els.freeRandomBtn.disabled = questionBankFree.length === 0;
-        } catch {
-          alert('Impossible de charger /free-questions.json');
-          questionBankFree = [];
-          els.freeLoadedInfo.textContent = '';
-          els.freeRandomBtn.disabled = true;
-        }
-      });
-      els.freeRandomBtn.addEventListener('click', () => {
-        if (!questionBankFree.length) return;
-        const item = questionBankFree[Math.floor(Math.random() * questionBankFree.length)];
-        els.freeQuestion.value = item.q || '';
-        els.freeSeconds.value = item.s ?? 30;
-      });
-
-      // Free: single
-      els.freeStartBtn.addEventListener('click', () => {
-        const q = els.freeQuestion.value.trim();
-        const seconds = Math.max(5, Math.min(180, parseInt(els.freeSeconds.value || '30', 10)));
-        if (!q) { alert('Entre une question'); return; }
-        socket.emit('free:start', { question: q, seconds });
-        socket.emit('countdown:start', seconds);
-        els.freeInfo.textContent = `Question posée (${seconds}s)`;
-        setTimeout(() => socket.emit('free:close'), seconds * 1000);
-      });
-
-      // Free: série
-      els.freeSeriesBtn.addEventListener('click', () => {
-        if (!questionBankFree.length) { alert('Charge d’abord la banque de questions'); return; }
-        const count = Math.max(1, Math.min(50, parseInt(els.freeSeriesCount.value || '20', 10)));
-        const seconds = Math.max(5, Math.min(180, parseInt(els.freeSeconds.value || '30', 10)));
-        const items = pickRandomFreeItems(questionBankFree, count, seconds);
-        socket.emit('free:series:start', { items });
-        els.freeInfo.textContent = `Série lancée (${items.length} question(s))`;
-      });
-
-      // Free: réception des questions (single ou série)
-      socket.on('free:question', ({ question, seconds, index, total }) => {
-        setModeUI('free');
-        els.freeInfo.textContent = index != null ? `Question ${index + 1}/${total} en cours (${seconds}s)` : `Question en cours (${seconds}s)`;
-        showQuestionOverlay(question, seconds, true);
-
-        if (index != null && total != null) {
-          setTimeout(() => {
-            hideQuestionOverlay();
-            setTimeout(() => socket.emit('free:series:next_question'), 400);
-          }, seconds * 1000);
-        }
-      });
-
-      // Free: single - résultats
-      socket.on('free:results', ({ question, items }) => {
-        hideQuestionOverlay();
-        const list = document.getElementById('freeResultsList');
-        list.innerHTML = '';
-        const title = document.createElement('div');
-        title.className = 'hint';
-        title.style.marginBottom = '.6rem';
-        title.textContent = `Question: ${question}`;
-        list.appendChild(title);
-
-        (items || []).forEach(item => {
-          const row = document.createElement('div');
-          row.className = 'free-item' + (item.validated ? ' validated' : '');
-          const who = document.createElement('div'); who.className = 'free-who'; who.textContent = item.name;
-          const text = document.createElement('div'); text.className = 'free-text'; text.textContent = item.text || '';
-          row.appendChild(who); row.appendChild(text);
-          row.addEventListener('click', () => { socket.emit('free:toggle_validate', { name: item.name }); });
-          list.appendChild(row);
-        });
-
-        document.getElementById('freeResultsOverlay').classList.add('show');
-      });
-      socket.on('free:validated', ({ name, validated }) => {
-        const rows = document.getElementById('freeResultsList').querySelectorAll('.free-item');
-        rows.forEach(r => {
-          const who = r.querySelector('.free-who');
-          if (who && who.textContent === name) r.classList.toggle('validated', !!validated);
-        });
-      });
-      document.getElementById('freeResultsCloseBtn').addEventListener('click', () => { document.getElementById('freeResultsOverlay').classList.remove('show'); });
-
-      // Free: review série
-      socket.on('free:review_open', ({ index, total, question, items }) => {
-        document.getElementById('freeReviewPosition').textContent = `${index + 1}/${total}`;
-        document.getElementById('freeReviewQuestion').textContent = question;
-        const list = document.getElementById('freeReviewList');
-        list.innerHTML = '';
-        (items || []).forEach(item => {
-          const row = document.createElement('div');
-          row.className = 'free-item' + (item.validated ? ' validated' : '');
-          const who = document.createElement('div'); who.className = 'free-who'; who.textContent = item.name;
-          const text = document.createElement('div'); text.className = 'free-text'; text.textContent = item.text || '';
-          row.appendChild(who); row.appendChild(text);
-          row.addEventListener('click', () => { socket.emit('free:toggle_validate', { name: item.name }); });
-          list.appendChild(row);
-        });
-
-        document.getElementById('freeReviewOverlay').classList.add('show');
-      });
-      socket.on('free:review_validated', ({ name, validated }) => {
-        const rows = document.getElementById('freeReviewList').querySelectorAll('.free-item');
-        rows.forEach(r => {
-          const who = r.querySelector('.free-who');
-          if (who && who.textContent === name) r.classList.toggle('validated', !!validated);
-        });
-      });
-
-      document.getElementById('freeReviewPrevBtn').addEventListener('click', () => {
-        const pos = document.getElementById('freeReviewPosition').textContent.split('/').map(x => parseInt(x, 10));
-        const idx = Math.max(0, (pos[0] || 1) - 2);
-        socket.emit('free:series:goto_index', { index: idx });
-      });
-      document.getElementById('freeReviewNextBtn').addEventListener('click', () => {
-        const pos = document.getElementById('freeReviewPosition').textContent.split('/').map(x => parseInt(x, 10));
-        const idx = Math.min((pos[1] || 1) - 1, (pos[0] || 1));
-        socket.emit('free:series:goto_index', { index: idx });
-      });
-
-      // Salle
-      els.regenBtn.addEventListener('click', () => { room = generateRoomCode(5); renderInvite(); socket.emit('tv:create_room', room); });
-      // Reset scores (désormais à droite)
-      els.resetScoresBtn.addEventListener('click', () => socket.emit('scores:reset'));
-    });
-  </script>
+  <script type="module" src="/js/tv-core.js"></script>
+  <script type="module" src="/js/tv-buzzer.js"></script>
+  <script type="module" src="/js/tv-quiz.js"></script>
+  <script type="module" src="/js/tv-guess.js"></script>
+  <script type="module" src="/js/tv-free.js"></script>
 </body>
 </html>
