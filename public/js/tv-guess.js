@@ -2,6 +2,7 @@
 import { GameRegistry, Core } from './tv-core.js';
 
 let bank = [];
+let autoplay = { running: false, total: 0, done: 0 };
 
 function renderGuessChart(prog) {
   const chart = document.getElementById('guessChart');
@@ -27,6 +28,32 @@ function renderGuessChart(prog) {
   scale.innerHTML = `<span>${prog.min}</span><span>${prog.max}</span>`;
 }
 
+function startAutoplay(count) {
+  if (!bank.length) { alert('Charge la banque'); return; }
+  autoplay.running = true; autoplay.total = count; autoplay.done = 0;
+  runNext();
+  function runNext() {
+    if (!autoplay.running) return;
+    if (autoplay.done >= autoplay.total) { autoplay.running = false; Core.hideProgress(); return; }
+    const item = bank[Math.floor(Math.random() * bank.length)];
+    const q = item.q || document.getElementById('guessQuestion').value.trim();
+    const min = item.min ?? parseInt(document.getElementById('guessMin').value || '0', 10);
+    const max = item.max ?? parseInt(document.getElementById('guessMax').value || '100', 10);
+    const correct = item.c ?? parseInt(document.getElementById('guessCorrect').value || '0', 10);
+    const seconds = Math.max(1, Math.min(60, parseInt(document.getElementById('guessSeconds').value || '8', 10)));
+    if (!q) { autoplay.running = false; alert('Question vide.'); return; }
+
+    Core.showProgress(`Auto‑play Devine: ${autoplay.done + 1}/${autoplay.total}`);
+    Core.socket.emit('guess:start', { question: q, correct, min, max, seconds });
+    Core.socket.emit('countdown:start', seconds);
+    setTimeout(() => {
+      Core.socket.emit('guess:close');
+      autoplay.done++;
+      setTimeout(runNext, 1200);
+    }, seconds * 1000);
+  }
+}
+
 GameRegistry.register('guess', {
   onEnter() {
     const loadBtn = document.getElementById('guessLoadBtn');
@@ -39,6 +66,17 @@ GameRegistry.register('guess', {
     const sInput = document.getElementById('guessSeconds');
     const startBtn = document.getElementById('guessStartBtn');
     const closeBtn = document.getElementById('guessCloseBtn');
+    const autoBtnId = 'guessAutoBtn';
+
+    if (!document.getElementById(autoBtnId)) {
+      const autoBtn = document.createElement('button');
+      autoBtn.id = autoBtnId;
+      autoBtn.className = 'btn-cyan';
+      autoBtn.textContent = 'Auto‑play (10)';
+      autoBtn.style.marginLeft = '.4rem';
+      closeBtn.parentElement.appendChild(autoBtn);
+      autoBtn.addEventListener('click', () => startAutoplay(10));
+    }
 
     if (!loadBtn._wired) {
       loadBtn._wired = true;
@@ -82,9 +120,7 @@ GameRegistry.register('guess', {
     document.getElementById('guessChart').innerHTML = '';
     document.getElementById('guessScale').innerHTML = `<span>${min}</span><span>${max}</span>`;
   },
-  onProgress(prog) {
-    renderGuessChart(prog);
-  },
+  onProgress(prog) { renderGuessChart(prog); },
   onResult({ correct, winners, bestDiff, tol }) {
     const maxShow = 5;
     const names = winners || [];

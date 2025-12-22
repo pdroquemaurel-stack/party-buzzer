@@ -4,12 +4,8 @@ import { EVENTS, GAME_EVENTS } from './types.js';
 export const GameRegistry = (() => {
   const modules = new Map();
   return {
-    register(name, mod) {
-      modules.set(name, mod);
-    },
-    get(name) {
-      return modules.get(name);
-    },
+    register(name, mod) { modules.set(name, mod); },
+    get(name) { return modules.get(name); },
     all() { return Array.from(modules.keys()); }
   };
 })();
@@ -35,13 +31,12 @@ export const Core = (() => {
     modeSwitch: document.getElementById('modeSwitch'),
     panels: document.querySelectorAll('[data-game-panel]'),
 
-    // Overlay question
+    // Overlays
     quizQOverlay: document.getElementById('quizQOverlay'),
     quizQText: document.getElementById('quizQText'),
     quizTimer: document.getElementById('quizTimer'),
     freeHint: document.getElementById('freeHint'),
 
-    // Free overlays
     freeResultsOverlay: document.getElementById('freeResultsOverlay'),
     freeResultsList: document.getElementById('freeResultsList'),
     freeResultsCloseBtn: document.getElementById('freeResultsCloseBtn'),
@@ -52,6 +47,9 @@ export const Core = (() => {
     freeReviewPrevBtn: document.getElementById('freeReviewPrevBtn'),
     freeReviewNextBtn: document.getElementById('freeReviewNextBtn'),
     freeReviewCloseBtn: document.getElementById('freeReviewCloseBtn'),
+
+    // Bandeau progression
+    progressBanner: createProgressBanner()
   };
 
   const FIXED_BASE = 'https://party-buzzer.onrender.com';
@@ -94,36 +92,56 @@ export const Core = (() => {
     els.qr.src = qrApi + encodeURIComponent(joinUrl);
   }
 
-    function renderPlayers(list) {
+  // Avatars/initiales
+  function colorFromName(name) {
+    let h = 0;
+    for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
+    h = (h >>> 0) % 360;
+    return `hsl(${h}, 85%, 58%)`;
+  }
+  function initials(name) {
+    const parts = String(name || '').trim().split(/\s+/);
+    const a = (parts[0] || '').charAt(0) || '';
+    const b = (parts[1] || '').charAt(0) || '';
+    return (a + b).toUpperCase() || (String(name || 'J')[0] || 'J').toUpperCase();
+  }
+
+  function renderPlayers(list) {
     els.players.innerHTML = '';
     const medals = ['🥇', '🥈', '🥉'];
 
     (list || []).forEach((p, idx) => {
       const li = document.createElement('li');
       li.className = 'score-item';
+      if (idx <= 2) li.classList.add(['gold','silver','bronze'][idx]);
 
-      // Médaille (top 3)
+      // Médaille
       const medal = document.createElement('div');
       medal.className = 'score-medal';
       medal.textContent = medals[idx] || '';
-      if (idx <= 2) li.classList.add(['gold','silver','bronze'][idx]);
 
-      // Nom + statut en ligne
+      // Avatar + nom
       const name = document.createElement('div');
       name.className = 'score-name';
+      const avatar = document.createElement('div');
+      avatar.className = 'avatar';
+      avatar.style.background = colorFromName(p.name);
+      avatar.textContent = initials(p.name);
       const online = document.createElement('span');
       online.className = 'online-dot' + (p.connected ? ' online' : '');
+      const label = document.createElement('span');
+      label.textContent = ' ' + p.name;
+
+      name.appendChild(avatar);
       name.appendChild(online);
-      const txt = document.createElement('span');
-      txt.textContent = ' ' + p.name;
-      name.appendChild(txt);
+      name.appendChild(label);
 
       // Score
       const score = document.createElement('div');
       score.className = 'score-value';
       score.textContent = p.score;
 
-      // Contrôles ▲/▼
+      // Controls
       const controls = document.createElement('div');
       controls.className = 'score-controls';
       const btnPlus = document.createElement('button');
@@ -142,6 +160,7 @@ export const Core = (() => {
         score.textContent = String((parseInt(score.textContent||'0',10)||0)-1);
         socket.emit('scores:adjust', { name: p.name, delta: -1 });
       });
+
       controls.appendChild(btnPlus);
       controls.appendChild(btnMinus);
 
@@ -150,12 +169,21 @@ export const Core = (() => {
       li.appendChild(score);
       li.appendChild(controls);
 
-      // petite animation d’apparition
       li.style.animation = 'pop-in .25s ease-out';
       els.players.appendChild(li);
     });
   }
 
+  function createProgressBanner() {
+    const b = document.createElement('div');
+    b.id = 'progressBanner';
+    b.className = 'progress-banner';
+    b.style.display = 'none';
+    document.body.appendChild(b);
+    return b;
+  }
+  function showProgress(text) { els.progressBanner.textContent = text; els.progressBanner.style.display = 'block'; }
+  function hideProgress() { els.progressBanner.style.display = 'none'; }
 
   function stopCountdownUI() { if (cdTimer) { clearInterval(cdTimer); cdTimer = null; } els.countdown.classList.remove('show'); }
   function startCountdown(sec = 3, onEnd) {
@@ -194,9 +222,7 @@ export const Core = (() => {
 
   // Mini routeur de mode
   function setModeUI(mode) {
-    els.panels.forEach(p => {
-      p.style.display = (p.dataset.gamePanel === mode) ? '' : 'none';
-    });
+    els.panels.forEach(p => { p.style.display = (p.dataset.gamePanel === mode) ? '' : 'none'; });
     currentMode = mode;
     setStatus(
       mode === 'buzzer' ? 'Mode Buzzer' :
@@ -206,19 +232,18 @@ export const Core = (() => {
     );
     const mod = GameRegistry.get(mode);
     if (mod && mod.onEnter) mod.onEnter();
-    // onExit pour l’ancien mode si besoin (optionnel si on garde une ref)
   }
 
   function emitGameEvent(type, payload) {
-    // Dispatch vers le module du mode courant
     const mod = GameRegistry.get(currentMode);
     if (!mod) return;
-    const handler = {
+    const map = {
       [GAME_EVENTS.QUESTION]: mod.onQuestion,
       [GAME_EVENTS.PROGRESS]: mod.onProgress,
       [GAME_EVENTS.RESULT]: mod.onResult,
       [GAME_EVENTS.CLOSE]: mod.onClose
-    }[type];
+    };
+    const handler = map[type];
     if (typeof handler === 'function') handler(payload);
   }
 
@@ -226,18 +251,24 @@ export const Core = (() => {
   socket.on(EVENTS.MODE_CHANGED, ({ mode }) => {
     hideQuestionOverlay();
     stopCountdownUI();
+    hideProgress();
     setModeUI(mode);
   });
   socket.on(EVENTS.ROOM_PLAYERS, renderPlayers);
+  socket.on('room:state', ({ locked }) => {
+    const lockText = locked ? ' — salle verrouillée (partie en cours)' : '';
+    setStatus(`Salle ${room}${lockText ? lockText : ''}`);
+  });
   socket.on(EVENTS.SCORES_RESET, () => setStatus('Scores réinitialisés'));
-  socket.on(EVENTS.ROUND_RESET, () => { hideQuestionOverlay(); setStatus('Tour/Question réinitialisé.'); });
+  socket.on(EVENTS.ROUND_RESET, () => { hideQuestionOverlay(); hideProgress(); setStatus('Tour/Question réinitialisé.'); });
 
-  // Buzzer → mapping vers évènements normalisés pour le module
+  // Buzzer
   socket.on(EVENTS.BUZZ_OPEN, () => emitGameEvent(GAME_EVENTS.QUESTION, { opened: true }));
   socket.on(EVENTS.BUZZ_WINNER, (data) => {
     els.winnerName.textContent = data.name;
     els.overlay.classList.add('show');
     emitGameEvent(GAME_EVENTS.RESULT, data);
+    hideProgress();
   });
 
   // Quiz
@@ -249,6 +280,7 @@ export const Core = (() => {
   socket.on(EVENTS.QUIZ_RESULT, (payload) => {
     hideQuestionOverlay();
     emitGameEvent(GAME_EVENTS.RESULT, payload);
+    hideProgress();
   });
 
   // Guess
@@ -258,23 +290,29 @@ export const Core = (() => {
     emitGameEvent(GAME_EVENTS.QUESTION, { question, min, max, seconds });
   });
   socket.on(EVENTS.GUESS_PROGRESS, (prog) => emitGameEvent(GAME_EVENTS.PROGRESS, prog));
-  socket.on(EVENTS.GUESS_RESULT, (payload) => { hideQuestionOverlay(); emitGameEvent(GAME_EVENTS.RESULT, payload); });
+  socket.on(EVENTS.GUESS_RESULT, (payload) => {
+    hideQuestionOverlay();
+    emitGameEvent(GAME_EVENTS.RESULT, payload);
+    hideProgress();
+  });
 
   // Free
   socket.on(EVENTS.FREE_QUESTION, ({ question, seconds, index, total }) => {
     setModeUI('free');
     showQuestionOverlay(question, seconds, true);
+    if (typeof index === 'number' && typeof total === 'number') showProgress(`Série: ${index + 1}/${total}`);
     emitGameEvent(GAME_EVENTS.QUESTION, { question, seconds, index, total });
   });
   socket.on(EVENTS.FREE_RESULTS, ({ question, items }) => {
     hideQuestionOverlay();
     emitGameEvent(GAME_EVENTS.RESULT, { question, items });
+    hideProgress();
   });
   socket.on(EVENTS.FREE_VALIDATED, ({ name, validated }) => {
     emitGameEvent(GAME_EVENTS.PROGRESS, { name, validated, context: 'single' });
   });
   socket.on(EVENTS.FREE_REVIEW_OPEN, ({ index, total, question, items }) => {
-    // Module free prend la main, il utilisera les éléments overlay free review
+    showProgress(`Correction: ${index + 1}/${total}`);
     emitGameEvent(GAME_EVENTS.QUESTION, { index, total, question, items, phase: 'review' });
   });
   socket.on(EVENTS.FREE_REVIEW_VALIDATED, ({ name, validated }) => {
@@ -302,7 +340,6 @@ export const Core = (() => {
     els.resetScoresBtn?.addEventListener('click', () => socket.emit('scores:reset'));
   });
 
-  // Expose utilités aux modules
   return {
     socket,
     setModeUI,
@@ -312,6 +349,8 @@ export const Core = (() => {
     showQuestionOverlay,
     hideQuestionOverlay,
     playBeep,
+    showProgress,
+    hideProgress,
     els
   };
 })();

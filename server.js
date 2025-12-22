@@ -66,17 +66,23 @@ function serveStatic(req, res) {
 const httpServer = http.createServer(serveStatic);
 const io = new Server(httpServer, { cors: { origin: '*' } });
 
-// rooms -> { players: Map<socketId,{name}>, scores: Map<name,number>, gameId, game }
+// rooms -> { players: Map<socketId,{name}>, scores: Map<name,number>, gameId, game, locked: boolean }
 const rooms = new Map();
 
 function getRoom(code) {
   let r = rooms.get(code);
   if (!r) {
-    r = { players: new Map(), scores: new Map(), gameId: 'buzzer', game: {} };
+    r = { players: new Map(), scores: new Map(), gameId: 'buzzer', game: {}, locked: false };
     games['buzzer'].init(r);
     rooms.set(code, r);
   }
   return r;
+}
+
+function broadcastRoomState(code) {
+  const r = rooms.get(code);
+  if (!r) return;
+  io.to(code).emit('room:state', { locked: !!r.locked });
 }
 
 function cleanName(name) {
@@ -131,6 +137,7 @@ io.on('connection', (socket) => {
     socket.emit('room:ready', { code: roomCode });
     socket.emit('mode:changed', { mode: r.gameId });
     broadcastPlayers(roomCode);
+    broadcastRoomState(roomCode);
   });
 
   socket.on('player:join', (payload, ack) => {
@@ -138,6 +145,7 @@ io.on('connection', (socket) => {
     const desired = cleanName(payload && payload.name);
     if (!code || !desired) { ack && ack({ ok: false, error: 'missing' }); return; }
     const r = getRoom(code);
+    if (r.locked) { ack && ack({ ok: false, error: 'locked' }); return; }
     const finalName = uniqueName(code, desired);
     playerName = finalName;
     roomCode = code;
@@ -147,6 +155,14 @@ io.on('connection', (socket) => {
     ack && ack({ ok: true, name: finalName });
     socket.emit('mode:changed', { mode: r.gameId });
     broadcastPlayers(code);
+  });
+
+  // Verrouillage manuel (optionnel)
+  socket.on('room:lock', (locked) => {
+    if (role !== 'tv' || !roomCode) return;
+    const r = getRoom(roomCode);
+    r.locked = !!locked;
+    broadcastRoomState(roomCode);
   });
 
   // Changement de jeu (TV)
@@ -167,7 +183,9 @@ io.on('connection', (socket) => {
     if (role !== 'tv' || !roomCode) return;
     const r = getRoom(roomCode);
     games[r.gameId].init(r);
+    r.locked = false;
     io.to(roomCode).emit('round:reset');
+    broadcastRoomState(roomCode);
   });
 
   // Reset scores (TV)
@@ -181,26 +199,13 @@ io.on('connection', (socket) => {
     broadcastPlayers(roomCode);
   });
 
-  // Ajustement manuel d'un score (TV)
-  socket.on('scores:adjust', ({ name, delta }) => {
-    if (role !== 'tv' || !roomCode) return;
-    const r = getRoom(roomCode);
-    const player = String(name || '').trim();
-    if (!player) return;
-    let d = parseInt(delta, 10);
-    if (!Number.isFinite(d)) return;
-    if (d > 50) d = 50;
-    if (d < -50) d = -50;
-    const prev = r.scores.get(player) || 0;
-    r.scores.set(player, prev + d);
-    broadcastPlayers(roomCode);
-  });
-
   // BUZZER
   socket.on('buzz:open', () => {
     if (role !== 'tv' || !roomCode) return;
     const r = getRoom(roomCode);
     if (r.gameId !== 'buzzer') return;
+    r.locked = true;
+    broadcastRoomState(roomCode);
     games.buzzer.adminOpen(io, r, roomCode);
   });
 
@@ -209,6 +214,9 @@ io.on('connection', (socket) => {
     const r = getRoom(roomCode);
     if (r.gameId !== 'buzzer') { ack && ack({ ok: false }); return; }
     games.buzzer.playerPress(io, r, roomCode, (playerName || 'Joueur'), ack, broadcastPlayers);
+    // Déverrouillage à la fin d'un buzz (gagnant trouvé)
+    r.locked = false;
+    broadcastRoomState(roomCode);
   });
 
   // QUIZ
@@ -216,6 +224,8 @@ io.on('connection', (socket) => {
     if (role !== 'tv' || !roomCode) return;
     let r = getRoom(roomCode);
     if (r.gameId !== 'quiz') r = ensureGame(roomCode, 'quiz');
+    r.locked = true;
+    broadcastRoomState(roomCode);
     games.quiz.adminStart(io, r, roomCode, { question, correct, seconds });
   });
 
@@ -231,13 +241,17 @@ io.on('connection', (socket) => {
     const r = getRoom(roomCode);
     if (r.gameId !== 'quiz') return;
     games.quiz.adminClose(io, r, roomCode, broadcastPlayers);
+    r.locked = false;
+    broadcastRoomState(roomCode);
   });
 
-  // GUESS
+  // GUESS (Devine le nombre)
   socket.on('guess:start', ({ question, correct, min, max, seconds }) => {
     if (role !== 'tv' || !roomCode) return;
     let r = getRoom(roomCode);
     if (r.gameId !== 'guess') r = ensureGame(roomCode, 'guess');
+    r.locked = true;
+    broadcastRoomState(roomCode);
     games.guess.adminStart(io, r, roomCode, { question, correct, min, max, seconds });
   });
 
@@ -253,6 +267,8 @@ io.on('connection', (socket) => {
     const r = getRoom(roomCode);
     if (r.gameId !== 'guess') return;
     games.guess.adminClose(io, r, roomCode, broadcastPlayers);
+    r.locked = false;
+    broadcastRoomState(roomCode);
   });
 
   // FREE (Réponse Libre) - Single
@@ -260,6 +276,8 @@ io.on('connection', (socket) => {
     if (role !== 'tv' || !roomCode) return;
     let r = getRoom(roomCode);
     if (r.gameId !== 'free') r = ensureGame(roomCode, 'free');
+    r.locked = true;
+    broadcastRoomState(roomCode);
     games.free.adminStart(io, r, roomCode, { question, seconds });
   });
 
@@ -275,13 +293,8 @@ io.on('connection', (socket) => {
     const r = getRoom(roomCode);
     if (r.gameId !== 'free') return;
     games.free.adminClose(io, r, roomCode);
-  });
-
-  socket.on('free:toggle_validate', ({ name }) => {
-    if (role !== 'tv' || !roomCode) return;
-    const r = getRoom(roomCode);
-    if (r.gameId !== 'free') return;
-    games.free.adminToggleValidate(io, r, roomCode, String(name || ''), broadcastPlayers);
+    r.locked = false;
+    broadcastRoomState(roomCode);
   });
 
   // FREE - Series
@@ -289,11 +302,12 @@ io.on('connection', (socket) => {
     if (role !== 'tv' || !roomCode) return;
     let r = getRoom(roomCode);
     if (r.gameId !== 'free') r = ensureGame(roomCode, 'free');
+    r.locked = true;
+    broadcastRoomState(roomCode);
     games.free.adminSeriesStart(io, r, roomCode, { items });
-    // Démarrer immédiatement la première question
+    // démarrer immédiatement
     games.free.adminSeriesNextQuestion(io, r, roomCode);
   });
-
 
   socket.on('free:series:next_question', () => {
     if (role !== 'tv' || !roomCode) return;
@@ -307,6 +321,7 @@ io.on('connection', (socket) => {
     const r = getRoom(roomCode);
     if (r.gameId !== 'free') return;
     games.free.adminSeriesFinish(io, r, roomCode);
+    // locked restera true jusqu'à fin de la review manuelle -> on déverrouille quand l'animateur quitte l'overlay si besoin
   });
 
   socket.on('free:series:goto_index', ({ index }) => {

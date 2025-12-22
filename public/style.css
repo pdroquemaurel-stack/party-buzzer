@@ -516,3 +516,28 @@ html, body, .tv-body { height: 100%; overflow: hidden; }
   from { transform: scale(.96); opacity: .0; }
   to   { transform: scale(1); opacity: 1; }
 }
+
+
+/* Avatars / initiales */
+.avatar {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 900; color: #1a1200;
+  box-shadow: 0 2px 0 rgba(0,0,0,.3), 0 0 0 2px rgba(255,255,255,.25) inset;
+  letter-spacing: .02em;
+}
+
+/* Bandeau de progression (en haut, discret) */
+.progress-banner {
+  position: fixed;
+  top: 12px; right: 12px;
+  z-index: 9998;
+  padding: .4rem .7rem;
+  border-radius: 999px;
+  font-weight: 800;
+  background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.12));
+  border: 2px solid rgba(255,255,255,.25);
+  box-shadow: 0 8px 20px rgba(0,0,0,.28);
+  backdrop-filter: blur(6px);
+}
