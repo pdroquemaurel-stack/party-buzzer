@@ -10,12 +10,11 @@ const quizGame = require('./server/games/quiz');
 const guessGame = require('./server/games/guess');
 const freeGame = require('./server/games/free');
 
-
 const games = {
   buzzer: buzzerGame,
   quiz: quizGame,
   guess: guessGame,
-  free : freeGame
+  free: freeGame
 };
 
 const PORT = process.env.PORT || 3000;
@@ -172,7 +171,7 @@ io.on('connection', (socket) => {
   });
 
   // Reset scores (TV)
-    socket.on('scores:reset', () => {
+  socket.on('scores:reset', () => {
     if (role !== 'tv' || !roomCode) return;
     const r = getRoom(roomCode);
     const newScores = new Map();
@@ -181,65 +180,21 @@ io.on('connection', (socket) => {
     io.to(roomCode).emit('scores:reset');
     broadcastPlayers(roomCode);
   });
-  
-  
-// Ajustement manuel d'un score (TV)
-socket.on('scores:adjust', ({ name, delta }) => {
-  // Sécurité : uniquement côté TV et salle valide
-  if (role !== 'tv' || !roomCode) return;
 
-  const r = getRoom(roomCode);
-
-  // Validation du joueur
-  const player = String(name || '').trim();
-  if (!player) return;
-
-  // Validation et clamp du delta
-  let d = parseInt(delta, 10);
-  if (!Number.isFinite(d)) return;
-  if (d > 50) d = 50;
-  if (d < -50) d = -50;
-
-  // Calcul du nouveau score
-  const prev = r.scores.get(player) || 0;
-  const next = prev + d;
-  r.scores.set(player, next);
-
-  // Reconstitution de la liste des joueurs (scores + statut connecté)
-  const listMap = new Map();
-
-  // Ajout des scores
-  r.scores.forEach((score, name) => {
-    listMap.set(name, {
-      name,
-      score,
-      connected: false
-    });
+  // Ajustement manuel d'un score (TV)
+  socket.on('scores:adjust', ({ name, delta }) => {
+    if (role !== 'tv' || !roomCode) return;
+    const r = getRoom(roomCode);
+    const player = String(name || '').trim();
+    if (!player) return;
+    let d = parseInt(delta, 10);
+    if (!Number.isFinite(d)) return;
+    if (d > 50) d = 50;
+    if (d < -50) d = -50;
+    const prev = r.scores.get(player) || 0;
+    r.scores.set(player, prev + d);
+    broadcastPlayers(roomCode);
   });
-
-  // Marque les joueurs connectés
-  r.players.forEach(p => {
-    const item = listMap.get(p.name) || {
-      name: p.name,
-      score: 0,
-      connected: false
-    };
-    item.connected = true;
-    listMap.set(p.name, item);
-  });
-
-  // Tri : score décroissant puis nom alphabétique
-  const list = Array.from(listMap.values()).sort(
-    (a, b) => (b.score - a.score) || a.name.localeCompare(b.name)
-  );
-
-  // Envoi immédiat au TV + broadcast à toute la salle
-  socket.emit('room:players', list);
-  io.to(roomCode).emit('room:players', list);
-});
-
-
-
 
   // BUZZER
   socket.on('buzz:open', () => {
@@ -278,7 +233,7 @@ socket.on('scores:adjust', ({ name, delta }) => {
     games.quiz.adminClose(io, r, roomCode, broadcastPlayers);
   });
 
-  // GUESS (Devine le nombre)
+  // GUESS
   socket.on('guess:start', ({ question, correct, min, max, seconds }) => {
     if (role !== 'tv' || !roomCode) return;
     let r = getRoom(roomCode);
@@ -300,8 +255,7 @@ socket.on('scores:adjust', ({ name, delta }) => {
     games.guess.adminClose(io, r, roomCode, broadcastPlayers);
   });
 
-
-  // REPOSNE LIBRE (free)
+  // FREE (Réponse Libre) - Single
   socket.on('free:start', ({ question, seconds }) => {
     if (role !== 'tv' || !roomCode) return;
     let r = getRoom(roomCode);
@@ -330,6 +284,34 @@ socket.on('scores:adjust', ({ name, delta }) => {
     games.free.adminToggleValidate(io, r, roomCode, String(name || ''), broadcastPlayers);
   });
 
+  // FREE - Series
+  socket.on('free:series:start', ({ items }) => {
+    if (role !== 'tv' || !roomCode) return;
+    let r = getRoom(roomCode);
+    if (r.gameId !== 'free') r = ensureGame(roomCode, 'free');
+    games.free.adminSeriesStart(io, r, roomCode, { items });
+  });
+
+  socket.on('free:series:next_question', () => {
+    if (role !== 'tv' || !roomCode) return;
+    const r = getRoom(roomCode);
+    if (r.gameId !== 'free') return;
+    games.free.adminSeriesNextQuestion(io, r, roomCode);
+  });
+
+  socket.on('free:series:finish', () => {
+    if (role !== 'tv' || !roomCode) return;
+    const r = getRoom(roomCode);
+    if (r.gameId !== 'free') return;
+    games.free.adminSeriesFinish(io, r, roomCode);
+  });
+
+  socket.on('free:series:goto_index', ({ index }) => {
+    if (role !== 'tv' || !roomCode) return;
+    const r = getRoom(roomCode);
+    if (r.gameId !== 'free') return;
+    games.free.adminSeriesGotoIndex(io, r, roomCode, index);
+  });
 
   socket.on('disconnect', () => {
     if (!roomCode) return;
