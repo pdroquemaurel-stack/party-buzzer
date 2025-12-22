@@ -272,14 +272,7 @@ io.on('connection', (socket) => {
   });
 
   // FREE (Réponse Libre) - Single
-	socket.on('free:start', ({ question, seconds, answer }) => {
-    if (role !== 'tv' || !roomCode) return;
-    let r = getRoom(roomCode);
-    if (r.gameId !== 'free') r = ensureGame(roomCode, 'free');
-    r.locked = true;
-    broadcastRoomState(roomCode);
-    games.free.adminStart(io, r, roomCode, { question, seconds });
-  });
+	socket.on('free:start', ({ question, seconds, answer }) => { if (role !== 'tv' || !roomCode) return; let r = getRoom(roomCode); if (r.gameId !== 'free') r = ensureGame(roomCode, 'free'); r.locked = true; broadcastRoomState(roomCode); // IMPORTANT: transmettre answer games.free.adminStart(io, r, roomCode, { question, seconds, answer }); });
 
   socket.on('free:answer', ({ text }, ack) => {
     if (!roomCode) { ack && ack({ ok: false }); return; }
