@@ -459,11 +459,11 @@
     }
 
     function startFreeSeries(items) {
+      // Le serveur démarrera la première question immédiatement
       socket.emit('free:series:start', { items });
-      // Le serveur pilotera chaque question via free:question,
-      // on enchaîne côté TV en écoutant cet événement et en planifiant la suivante.
-      // Pas besoin d’état local ici.
+      els.freeInfo.textContent = `Série lancée (${items.length} question(s))`;
     }
+
 
     window.addEventListener('DOMContentLoaded', function () {
       renderInvite();

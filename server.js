@@ -290,7 +290,10 @@ io.on('connection', (socket) => {
     let r = getRoom(roomCode);
     if (r.gameId !== 'free') r = ensureGame(roomCode, 'free');
     games.free.adminSeriesStart(io, r, roomCode, { items });
+    // Démarrer immédiatement la première question
+    games.free.adminSeriesNextQuestion(io, r, roomCode);
   });
+
 
   socket.on('free:series:next_question', () => {
     if (role !== 'tv' || !roomCode) return;
