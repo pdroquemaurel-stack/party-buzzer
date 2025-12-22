@@ -31,6 +31,7 @@ module.exports = {
   },
 
   // ---------- SINGLE QUESTION ----------
+  // NOTE: la TV peut fournir {answer} quand on pose depuis la banque
   adminStart(io, room, code, { question, seconds, answer }) {
     const q = String(question || '').trim().slice(0, 300);
     const sec = clampInt(seconds, 5, 180, 30);
@@ -41,7 +42,7 @@ module.exports = {
     room.game.open = true;
     room.game.question = q;
     room.game.seconds = sec;
-    room.game.answer = a;
+    room.game.answer = a || ''; // peut être vide si question libre sans "bonne réponse"
     room.game.answers = new Map();
 
     io.to(code).emit('mode:changed', { mode: 'free' });
@@ -89,6 +90,7 @@ module.exports = {
     });
     results.sort((a, b) => a.name.localeCompare(b.name));
 
+    // IMPORTANT: transmettre expected = g.answer
     io.to(code).emit('free:results', { question: g.question, expected: g.answer || '', items: results });
   },
 
@@ -126,6 +128,7 @@ module.exports = {
   },
 
   // ---------- SERIES ----------
+  // items = [{ q, s, a }]
   adminSeriesStart(io, room, code, { items }) {
     const list = Array.isArray(items) ? items.slice(0, 50) : [];
     if (list.length === 0) return;
@@ -157,6 +160,7 @@ module.exports = {
       g.reviewIndex = 0;
       const first = g.series[0];
       const items = this._buildReviewItems(room, g, 0);
+      // IMPORTANT: expected = first.a
       io.to(code).emit('free:review_open', {
         index: 0, total: g.seriesLength,
         question: first.q,
