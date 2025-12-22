@@ -1,28 +1,41 @@
 // public/js/tv-buzzer.js
-import { GameRegistry } from './tv-core.js';
-import { GAME_EVENTS } from './types.js';
+import { GameRegistry, Core } from './tv-core.js';
+
+// Module Buzzer
+// - onEnter: connecte les boutons "Démarrer le tour" et "Réinitialiser le tour"
+// - onQuestion: feedback facultatif quand round:open arrive (non nécessaire ici)
+// - onResult: l'overlay gagnant est déjà géré par le Core (winnerName + overlay)
 
 GameRegistry.register('buzzer', {
   onEnter() {
-    // Rien de spécial à l'entrée
-  },
-  onQuestion(payload) {
-    // round:open -> payload.opened === true
-    // Boutons
     const startBtn = document.getElementById('startRoundBtn');
     const resetBtn = document.getElementById('resetRoundBtn');
-    startBtn.onclick = () => {
-      // 3-2-1 puis ouvrir
-      import('./tv-core.js').then(({ Core }) => {
+
+    if (!startBtn._wired) {
+      startBtn._wired = true;
+      startBtn.addEventListener('click', () => {
+        // 3-2-1 puis ouverture du tour
         Core.startCountdown(3, () => Core.socket.emit('buzz:open'));
       });
-    };
-    resetBtn.onclick = () => {
-      import('./tv-core.js').then(({ Core }) => Core.socket.emit('round:reset'));
-    };
+    }
+    if (!resetBtn._wired) {
+      resetBtn._wired = true;
+      resetBtn.addEventListener('click', () => {
+        Core.socket.emit('round:reset');
+      });
+    }
   },
+
+  onQuestion(payload) {
+    // round:open est envoyé par le serveur et géré côté joueurs pour activer le bouton BUZZ.
+    // On peut afficher un statut si tu veux (facultatif).
+    // Exemple:
+    // Core.setStatus('Tour ouvert: le plus rapide gagne !');
+  },
+
   onResult(data) {
-    // Affichage overlay géré par le core (winnerName + overlay.show)
+    // Rien à faire ici: l'overlay gagnant est affiché par le Core.
   },
+
   onClose() {}
 });
