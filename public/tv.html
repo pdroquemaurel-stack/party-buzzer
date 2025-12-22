@@ -53,7 +53,6 @@
         <div class="row btn-row">
           <button id="startRoundBtn" class="btn-green">Démarrer le tour</button>
           <button id="resetRoundBtn">Réinitialiser le tour</button>
-          <button id="resetScoresBtn" class="btn-cyan">Réinitialiser scores</button>
         </div>
       </section>
 
@@ -170,6 +169,9 @@
       <section class="tv-scores">
         <h2>Scores</h2>
         <ul id="players" class="score-list"></ul>
+        <div class="score-footer">
+          <button id="resetScoresBtn" class="btn-cyan">Réinitialiser scores</button>
+        </div>
       </section>
     </aside>
   </main>
@@ -261,6 +263,7 @@
 
       // Scores
       players: document.getElementById('players'),
+      resetScoresBtn: document.getElementById('resetScoresBtn'),
 
       // Status + countdown
       status: document.getElementById('status'),
@@ -334,8 +337,7 @@
 
       // Buzzer actions
       startRoundBtn: document.getElementById('startRoundBtn'),
-      resetRoundBtn: document.getElementById('resetRoundBtn'),
-      resetScoresBtn: document.getElementById('resetScoresBtn')
+      resetRoundBtn: document.getElementById('resetRoundBtn')
     };
 
     const socket = io();
@@ -439,16 +441,12 @@
       els.guessScale.innerHTML = `<span>${prog.min}</span><span>${prog.max}</span>`;
     }
 
-    // Free: Série — helpers
+    // Helpers Free
     function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
     function pickRandomFreeItems(src, amount, secondsOverride) {
       if (!Array.isArray(src) || src.length === 0) return [];
       const arr = src.slice();
-      // shuffle
-      for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-      }
+      for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
       const n = clamp(amount || 20, 1, 50);
       const out = [];
       for (let i = 0; i < n; i++) {
@@ -457,13 +455,6 @@
       }
       return out;
     }
-
-    function startFreeSeries(items) {
-      // Le serveur démarrera la première question immédiatement
-      socket.emit('free:series:start', { items });
-      els.freeInfo.textContent = `Série lancée (${items.length} question(s))`;
-    }
-
 
     window.addEventListener('DOMContentLoaded', function () {
       renderInvite();
@@ -489,15 +480,12 @@
       // Buzzer
       els.startRoundBtn.addEventListener('click', () => startCountdown(3, () => socket.emit('buzz:open')));
       els.resetRoundBtn.addEventListener('click', () => socket.emit('round:reset'));
-      els.resetScoresBtn.addEventListener('click', () => socket.emit('scores:reset'));
-      socket.on('round:open', () => { els.overlay.classList.remove('show'); setStatus('Tour ouvert: le plus rapide gagne !'); });
-      socket.on('round:winner', (data) => { setStatus(`Gagnant: ${data.name} (+1)`); els.winnerName.textContent = data.name; els.overlay.classList.add('show'); playBeep(1200, 200); });
 
       // Quiz
       els.quizLoadBtn?.addEventListener('click', async () => {
         try {
           const res = await fetch('/questions.json', { cache: 'no-store' });
-        const data = await res.json();
+          const data = await res.json();
           if (!Array.isArray(data)) throw new Error('Format invalide');
           questionBankQuiz = data;
           els.quizLoadedInfo.textContent = `${questionBankQuiz.length} question(s) chargée(s).`;
@@ -519,6 +507,8 @@
         setTimeout(() => socket.emit('quiz:close'), seconds * 1000);
       });
       els.quizCloseBtn.addEventListener('click', () => socket.emit('quiz:close'));
+      socket.on('quiz:question', ({ question, seconds }) => { setModeUI('quiz'); els.quizInfo.textContent = `Question en cours (${seconds}s): "${question}"`; showQuestionOverlay(question, seconds, false); });
+      socket.on('quiz:result', ({ correct, countTrue, countFalse, total }) => { hideQuestionOverlay(); const txt = correct ? 'Vrai' : 'Faux'; els.quizInfo.textContent = `Bonne réponse: ${txt} — Vrai: ${countTrue}, Faux: ${countFalse}, Total: ${total}`; });
 
       // Guess
       els.guessLoadBtn.addEventListener('click', async () => {
@@ -605,13 +595,14 @@
         setTimeout(() => socket.emit('free:close'), seconds * 1000);
       });
 
-      // Free: série avec nombre et durée fixés
+      // Free: série
       els.freeSeriesBtn.addEventListener('click', () => {
         if (!questionBankFree.length) { alert('Charge d’abord la banque de questions'); return; }
         const count = Math.max(1, Math.min(50, parseInt(els.freeSeriesCount.value || '20', 10)));
         const seconds = Math.max(5, Math.min(180, parseInt(els.freeSeconds.value || '30', 10)));
         const items = pickRandomFreeItems(questionBankFree, count, seconds);
-        startFreeSeries(items);
+        socket.emit('free:series:start', { items });
+        els.freeInfo.textContent = `Série lancée (${items.length} question(s))`;
       });
 
       // Free: réception des questions (single ou série)
@@ -696,12 +687,11 @@
         const idx = Math.min((pos[1] || 1) - 1, (pos[0] || 1));
         socket.emit('free:series:goto_index', { index: idx });
       });
-      document.getElementById('freeReviewCloseBtn').addEventListener('click', () => {
-        document.getElementById('freeReviewOverlay').classList.remove('show');
-      });
 
       // Salle
       els.regenBtn.addEventListener('click', () => { room = generateRoomCode(5); renderInvite(); socket.emit('tv:create_room', room); });
+      // Reset scores (désormais à droite)
+      els.resetScoresBtn.addEventListener('click', () => socket.emit('scores:reset'));
     });
   </script>
 </body>

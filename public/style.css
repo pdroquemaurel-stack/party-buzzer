@@ -467,3 +467,18 @@ html, body, .tv-body { height: 100%; overflow: hidden; }
 
 /* Espace un peu plus large entre boutons dans panneaux */
 .btn-row { gap: .8rem; }
+
+/* Panneau scores: bouton de reset en bas */
+.tv-right .tv-scores {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: .8rem;
+  height: 100%;
+}
+.score-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+.score-footer button {
+  width: 100%;
+}
