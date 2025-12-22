@@ -264,34 +264,3 @@ input[type="range"]::-moz-range-thumb {
   .qr { justify-content: center; }
   .card { padding: .9rem 1rem; }
 }
-
-/* Grille reponses (trivia) */
-.answers-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: .8rem;
-}
-.answer-card {
-  background: rgba(255,255,255,.08);
-  border: 2px solid rgba(255,255,255,.15);
-  border-radius: 14px;
-  padding: .7rem .8rem;
-  box-shadow: 0 4px 0 rgba(0,0,0,.25);
-  cursor: pointer;
-  transition: transform .05s ease, box-shadow .05s ease, background .15s ease, border-color .15s ease;
-}
-.answer-card:hover { transform: translateY(-1px); }
-.answer-card.correct {
-  background: linear-gradient(180deg, #78ff9a, #00e676);
-  border-color: #00e676;
-  color: #102b14;
-}
-.answer-name {
-  font-weight: 900; margin-bottom: .35rem;
-  text-shadow: 0 1px 0 rgba(0,0,0,.25);
-}
-.answer-text {
-  word-wrap: break-word;
-  font-weight: 700;
-}
-
