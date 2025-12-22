@@ -403,3 +403,38 @@ html, body, .tv-body { height: 100%; overflow: hidden; }
 
 /* Optionnel: réduire l’ombre sur petites zones scrollables pour gagner un peu de place visuelle */
 .tv-center .card { margin-bottom: .8rem; }
+
+
+/* ==== Ajustements TV (marges réduites, espacement boutons) ==== */
+.container.tv-layout-3.tight {
+  /* Réduit les marges horizontales globales */
+  width: 100vw;
+  margin: 0;
+  padding-left: 0.6rem;
+  padding-right: 0.6rem;
+}
+
+.container.tv-layout-3 {
+  grid-template-columns: 22% 1fr 22%; /* moins d'espace perdu sur les côtés */
+}
+
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem; /* espace entre boutons pour éviter les recouvrements */
+}
+
+.mode-switch { gap: .6rem; }
+.mode-pill { padding: .4rem .7rem; }
+
+.tv-left, .tv-right, .tv-center { gap: 1rem; }
+.tv-center { padding-right: .4rem; }
+
+/* Empêche les images et boutons de se chevaucher à l'intérieur des cartes */
+.card .row { display: flex; gap: .6rem; flex-wrap: wrap; }
+
+/* Boutons dans les cartes: éviter d'être trop larges et se coller */
+.card button { margin: 0; }
+
+/* Score: empêcher la colonne des contrôles de se coller */
+.score-controls { gap: .35rem; }

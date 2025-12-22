@@ -169,7 +169,7 @@ io.on('connection', (socket) => {
   });
 
   // Reset scores (TV)
-  socket.on('scores:reset', () => {
+    socket.on('scores:reset', () => {
     if (role !== 'tv' || !roomCode) return;
     const r = getRoom(roomCode);
     const newScores = new Map();
@@ -178,6 +178,65 @@ io.on('connection', (socket) => {
     io.to(roomCode).emit('scores:reset');
     broadcastPlayers(roomCode);
   });
+  
+  
+// Ajustement manuel d'un score (TV)
+socket.on('scores:adjust', ({ name, delta }) => {
+  // Sécurité : uniquement côté TV et salle valide
+  if (role !== 'tv' || !roomCode) return;
+
+  const r = getRoom(roomCode);
+
+  // Validation du joueur
+  const player = String(name || '').trim();
+  if (!player) return;
+
+  // Validation et clamp du delta
+  let d = parseInt(delta, 10);
+  if (!Number.isFinite(d)) return;
+  if (d > 50) d = 50;
+  if (d < -50) d = -50;
+
+  // Calcul du nouveau score
+  const prev = r.scores.get(player) || 0;
+  const next = prev + d;
+  r.scores.set(player, next);
+
+  // Reconstitution de la liste des joueurs (scores + statut connecté)
+  const listMap = new Map();
+
+  // Ajout des scores
+  r.scores.forEach((score, name) => {
+    listMap.set(name, {
+      name,
+      score,
+      connected: false
+    });
+  });
+
+  // Marque les joueurs connectés
+  r.players.forEach(p => {
+    const item = listMap.get(p.name) || {
+      name: p.name,
+      score: 0,
+      connected: false
+    };
+    item.connected = true;
+    listMap.set(p.name, item);
+  });
+
+  // Tri : score décroissant puis nom alphabétique
+  const list = Array.from(listMap.values()).sort(
+    (a, b) => (b.score - a.score) || a.name.localeCompare(b.name)
+  );
+
+  // Envoi immédiat au TV + broadcast à toute la salle
+  socket.emit('room:players', list);
+  io.to(roomCode).emit('room:players', list);
+});
+
+
+
 
   // BUZZER
   socket.on('buzz:open', () => {
