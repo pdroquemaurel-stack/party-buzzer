@@ -1,5 +1,5 @@
 // server/games/free.js
-// Jeu "Réponse Libre" avec série et correction différée.
+// Jeu "Réponse Libre" avec série et correction différée + bonne réponse (answer) pour comparaison.
 
 function clampInt(v, min, max, def) {
   const n = parseInt(v, 10);
@@ -19,9 +19,10 @@ module.exports = {
       open: false,
       question: '',
       seconds: 30,
+      answer: '',                 // bonne réponse attendue (affichage correction)
       answers: new Map(),         // name -> { text, validated: false }
       // Series
-      series: [],                 // [{ q, s }]
+      series: [],                 // [{ q, s, a }]
       seriesLength: 0,
       currentIndex: -1,
       answersByIdx: new Map(),    // idx -> Map(name -> { text, validated })
@@ -30,15 +31,17 @@ module.exports = {
   },
 
   // ---------- SINGLE QUESTION ----------
-  adminStart(io, room, code, { question, seconds }) {
+  adminStart(io, room, code, { question, seconds, answer }) {
     const q = String(question || '').trim().slice(0, 300);
     const sec = clampInt(seconds, 5, 180, 30);
+    const a = String(answer || '').slice(0, 300);
 
     room.game.mode = 'single';
     room.game.phase = 'single_active';
     room.game.open = true;
     room.game.question = q;
     room.game.seconds = sec;
+    room.game.answer = a;
     room.game.answers = new Map();
 
     io.to(code).emit('mode:changed', { mode: 'free' });
@@ -76,25 +79,22 @@ module.exports = {
     g.open = false;
     g.phase = 'idle';
 
-    // Construire résultats
     const results = [];
-    // joueurs connectés d'abord
     room.players.forEach(p => {
       const rec = g.answers.get(p.name);
       results.push({ name: p.name, text: rec ? rec.text : '', validated: rec ? !!rec.validated : false });
     });
-    // inclure les autres
     g.answers.forEach((rec, name) => {
       if (!results.find(r => r.name === name)) results.push({ name, text: rec.text, validated: !!rec.validated });
     });
-
     results.sort((a, b) => a.name.localeCompare(b.name));
-    io.to(code).emit('free:results', { question: g.question, items: results });
+
+    io.to(code).emit('free:results', { question: g.question, expected: g.answer || '', items: results });
   },
 
   adminToggleValidate(io, room, code, playerName, broadcastPlayers) {
     const g = room.game || {};
-    // Single mode correction live
+    // Single
     if (g.mode === 'single' && g.phase === 'idle') {
       const rec = g.answers.get(playerName) || { text: '', validated: false };
       rec.validated = !rec.validated;
@@ -107,7 +107,7 @@ module.exports = {
       return;
     }
 
-    // Series correction phase
+    // Series review
     if (g.mode === 'series' && g.phase === 'review') {
       const idx = g.reviewIndex;
       let map = g.answersByIdx.get(idx);
@@ -127,22 +127,25 @@ module.exports = {
 
   // ---------- SERIES ----------
   adminSeriesStart(io, room, code, { items }) {
-    const list = Array.isArray(items) ? items.slice(0, 20) : [];
+    const list = Array.isArray(items) ? items.slice(0, 50) : [];
     if (list.length === 0) return;
+
+    // Normaliser {q, s, a}
+    const norm = list.map(it => ({
+      q: String((it && it.q) || '').slice(0, 300),
+      s: clampInt(it && it.s, 5, 180, 30),
+      a: String((it && it.a) || '').slice(0, 300)
+    }));
 
     room.game.mode = 'series';
     room.game.phase = 'series_active';
-    room.game.series = list.map(it => ({
-      q: String((it && it.q) || '').slice(0, 300),
-      s: clampInt(it && it.s, 5, 180, 30)
-    }));
-    room.game.seriesLength = room.game.series.length;
+    room.game.series = norm;
+    room.game.seriesLength = norm.length;
     room.game.currentIndex = -1;
     room.game.answersByIdx = new Map();
     room.game.reviewIndex = 0;
 
     io.to(code).emit('mode:changed', { mode: 'free' });
-    // TV va demander la prochaine question
   },
 
   adminSeriesNextQuestion(io, room, code) {
@@ -150,17 +153,20 @@ module.exports = {
     if (g.mode !== 'series' || g.phase !== 'series_active') return;
     const next = g.currentIndex + 1;
     if (next >= g.seriesLength) {
-      // Fin des questions -> phase review
       g.phase = 'review';
       g.reviewIndex = 0;
       const first = g.series[0];
       const items = this._buildReviewItems(room, g, 0);
-      io.to(code).emit('free:review_open', { index: 0, total: g.seriesLength, question: first.q, items });
+      io.to(code).emit('free:review_open', {
+        index: 0, total: g.seriesLength,
+        question: first.q,
+        expected: first.a || '',
+        items
+      });
       return;
     }
     g.currentIndex = next;
     const cur = g.series[next];
-    // Emit la question courante (overlay question)
     io.to(code).emit('free:question', { question: cur.q, seconds: cur.s, index: next, total: g.seriesLength });
   },
 
@@ -171,7 +177,12 @@ module.exports = {
     g.reviewIndex = 0;
     const first = g.series[0];
     const items = this._buildReviewItems(room, g, 0);
-    io.to(code).emit('free:review_open', { index: 0, total: g.seriesLength, question: first.q, items });
+    io.to(code).emit('free:review_open', {
+      index: 0, total: g.seriesLength,
+      question: first.q,
+      expected: first.a || '',
+      items
+    });
   },
 
   adminSeriesGotoIndex(io, room, code, index) {
@@ -180,30 +191,24 @@ module.exports = {
     const idx = clampInt(index, 0, g.seriesLength - 1, 0);
     g.reviewIndex = idx;
     const q = g.series[idx].q;
+    const a = g.series[idx].a || '';
     const items = this._buildReviewItems(room, g, idx);
-    io.to(code).emit('free:review_open', { index: idx, total: g.seriesLength, question: q, items });
+    io.to(code).emit('free:review_open', {
+      index: idx, total: g.seriesLength,
+      question: q, expected: a, items
+    });
   },
 
   _buildReviewItems(room, g, idx) {
     const items = [];
     const map = g.answersByIdx.get(idx) || new Map();
-
-    // joueurs connectés d'abord
     room.players.forEach(p => {
       const rec = map.get(p.name);
-      items.push({
-        name: p.name,
-        text: rec ? rec.text : '',
-        validated: rec ? !!rec.validated : false
-      });
+      items.push({ name: p.name, text: rec ? rec.text : '', validated: rec ? !!rec.validated : false });
     });
-    // inclure ceux qui ont répondu mais ne sont pas connectés
     map.forEach((rec, name) => {
-      if (!items.find(r => r.name === name)) {
-        items.push({ name, text: rec.text, validated: !!rec.validated });
-      }
+      if (!items.find(r => r.name === name)) items.push({ name, text: rec.text, validated: !!rec.validated });
     });
-
     items.sort((a, b) => a.name.localeCompare(b.name));
     return items;
   }

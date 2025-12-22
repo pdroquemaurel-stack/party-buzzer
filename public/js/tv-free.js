@@ -12,7 +12,7 @@ function pickRandomFreeItems(src, amount, secondsOverride) {
   const out = [];
   for (let i = 0; i < n; i++) {
     const srcItem = arr[i % arr.length];
-    out.push({ q: srcItem.q, s: secondsOverride || srcItem.s || 30 });
+    out.push({ q: srcItem.q, s: secondsOverride || srcItem.s || 30, a: srcItem.a || '' });
   }
   return out;
 }
@@ -47,7 +47,8 @@ GameRegistry.register('free', {
         const q = qInput.value.trim();
         const seconds = Math.max(5, Math.min(180, parseInt(sInput.value || '30', 10)));
         if (!q) { alert('Entre une question'); return; }
-        Core.socket.emit('free:start', { question: q, seconds });
+        // Pas de "bonne réponse" saisie manuelle pour single; si besoin on peut ajouter un champ plus tard
+        Core.socket.emit('free:start', { question: q, seconds, answer: '' });
         Core.socket.emit('countdown:start', seconds);
         info.textContent = `Question posée (${seconds}s)`;
         setTimeout(() => Core.socket.emit('free:close'), seconds * 1000);
@@ -57,9 +58,10 @@ GameRegistry.register('free', {
         if (!bank.length) { alert('Charge la banque'); return; }
         const item = bank[Math.floor(Math.random() * bank.length)];
         const q = item.q || '';
-        if (!q) return;
         const seconds = Math.max(5, Math.min(180, parseInt(sInput.value || (item.s || '30'), 10)));
-        Core.socket.emit('free:start', { question: q, seconds });
+        const a = item.a || '';
+        if (!q) return;
+        Core.socket.emit('free:start', { question: q, seconds, answer: a });
         Core.socket.emit('countdown:start', seconds);
         info.textContent = `Question posée (${seconds}s)`;
         setTimeout(() => Core.socket.emit('free:close'), seconds * 1000);
@@ -93,10 +95,23 @@ GameRegistry.register('free', {
       });
     }
   },
+
   onQuestion(payload) {
     if (payload.phase === 'review') {
       Core.els.freeReviewPosition.textContent = `${payload.index + 1}/${payload.total}`;
       Core.els.freeReviewQuestion.textContent = payload.question;
+
+      // Afficher la bonne réponse (expected) sous la question
+      let expectedEl = document.getElementById('freeReviewExpected');
+      if (!expectedEl) {
+        expectedEl = document.createElement('div');
+        expectedEl.id = 'freeReviewExpected';
+        expectedEl.className = 'hint';
+        expectedEl.style.marginTop = '.35rem';
+        Core.els.freeReviewQuestion.insertAdjacentElement('afterend', expectedEl);
+      }
+      expectedEl.textContent = payload.expected ? `Bonne réponse: ${payload.expected}` : 'Bonne réponse: —';
+
       const list = Core.els.freeReviewList;
       list.innerHTML = '';
       (payload.items || []).forEach(item => {
@@ -123,6 +138,7 @@ GameRegistry.register('free', {
       freeInfo.textContent = `Question en cours (${payload.seconds}s)`;
     }
   },
+
   onProgress({ name, validated, context }) {
     const list = context === 'review' ? Core.els.freeReviewList : Core.els.freeResultsList;
     const rows = list.querySelectorAll('.free-item');
@@ -131,14 +147,23 @@ GameRegistry.register('free', {
       if (who && who.textContent === name) r.classList.toggle('validated', !!validated);
     });
   },
-  onResult({ question, items }) {
+
+  onResult({ question, expected, items }) {
     const list = Core.els.freeResultsList;
     list.innerHTML = '';
+
+    // En-tête question + bonne réponse
     const title = document.createElement('div');
     title.className = 'hint';
-    title.style.marginBottom = '.6rem';
+    title.style.marginBottom = '.35rem';
     title.textContent = `Question: ${question}`;
+    const exp = document.createElement('div');
+    exp.className = 'hint';
+    exp.style.marginBottom = '.6rem';
+    exp.textContent = expected ? `Bonne réponse: ${expected}` : 'Bonne réponse: —';
+
     list.appendChild(title);
+    list.appendChild(exp);
 
     (items || []).forEach(item => {
       const row = document.createElement('div');
@@ -152,5 +177,6 @@ GameRegistry.register('free', {
 
     Core.els.freeResultsOverlay.classList.add('show');
   },
+
   onClose() {}
 });
