@@ -338,3 +338,68 @@ input[type="range"]::-moz-range-thumb {
   margin: .6rem 0;
   background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.05));
 }
+
+/* ==== TV Layout 3 colonnes plein écran (sans scroll global) ==== */
+html, body, .tv-body { height: 100%; overflow: hidden; }
+.container.tv-layout-3 {
+  height: 100vh;
+  padding-top: 1rem;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  grid-template-columns: 24% 1fr 24%;
+  grid-template-areas:
+    "header header header"
+    "left   center  right";
+  gap: 1rem;
+}
+.tv-header { grid-area: header; display:flex; align-items:center; justify-content:space-between; }
+.tv-left   { grid-area: left; display:flex; flex-direction: column; gap: 1rem; overflow: hidden; }
+.tv-center { grid-area: center; display:flex; flex-direction: column; gap: 1rem; overflow: auto; padding-right: .3rem; }
+.tv-right  { grid-area: right; display:flex; flex-direction: column; gap: 1rem; overflow: hidden; }
+
+.tv-qr img {
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(0,0,0,.35), 0 0 0 4px rgba(255,255,255,.08);
+}
+
+.tv-status-box .tv-status {
+  font-size: 1.05rem; font-weight: 800;
+  padding: .4rem .2rem;
+}
+
+/* Scoreboard right column */
+.tv-right .tv-scores { overflow: auto; }
+.score-list { list-style:none; padding:0; margin:0; display:grid; gap:.5rem; }
+.score-item {
+  display:grid;
+  grid-template-columns: 1fr auto auto;
+  align-items:center;
+  gap:.6rem;
+  padding:.5rem .6rem;
+  background: rgba(255,255,255,.07);
+  border: 2px solid rgba(255,255,255,.12);
+  border-radius: 12px;
+  box-shadow: 0 3px 0 rgba(0,0,0,.25);
+}
+.score-name { font-weight: 800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.score-value {
+  min-width: 2.8rem; text-align: right; font-weight: 800;
+  color: var(--primary);
+  text-shadow: 0 1px 0 rgba(0,0,0,.35);
+}
+.score-controls { display:flex; flex-direction: column; gap:.25rem; }
+.score-btn {
+  padding:.25rem .5rem; border-radius: 8px;
+  background: linear-gradient(180deg, #62f3ff, #00e5ff);
+  box-shadow: 0 3px 0 #0aa2b0, 0 8px 14px rgba(0,0,0,.3);
+}
+.score-btn.minus { background: linear-gradient(180deg, #ff9a9a, #ff5252); box-shadow: 0 3px 0 #b02e2e, 0 8px 14px rgba(0,0,0,.3); }
+
+/* Soft card variant */
+.card.soft {
+  margin: .6rem 0;
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.05));
+}
+
+/* Optionnel: réduire l’ombre sur petites zones scrollables pour gagner un peu de place visuelle */
+.tv-center .card { margin-bottom: .8rem; }
