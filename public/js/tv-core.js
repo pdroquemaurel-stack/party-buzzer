@@ -108,7 +108,7 @@ export const Core = (() => {
 
   function renderPlayers(list) {
     els.players.innerHTML = '';
-    const medals = ['🥇', '🥈', '🥉'];
+    const medals = ['🥇', '🥈', '💩'];
 
     (list || []).forEach((p, idx) => {
       const li = document.createElement('li');
@@ -139,7 +139,8 @@ export const Core = (() => {
       // Score
       const score = document.createElement('div');
       score.className = 'score-value';
-      score.textContent = p.score;
+      score.textContent = `${p.score} ${p.score === 1 ? 'point' : 'points'}`;
+
 
       // Controls
       const controls = document.createElement('div');

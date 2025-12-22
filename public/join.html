@@ -168,7 +168,12 @@
 
       socket = io();
       socket.emit('player:join', { room, name: pseudo }, (res) => {
-        if (!res || !res.ok) { alert('Impossible de rejoindre'); return; }
+        if (!res || !res.ok) {
+          const reason = res && res.error === 'locked' ? 'Partie en cours, réessayez bientôt.' : 'Impossible de rejoindre';
+          alert(reason);
+          return;
+        }
+
         elJoinedRoom.textContent = room;
         elJoinedPseudo.textContent = res.name;
         elForm.style.display = 'none';
