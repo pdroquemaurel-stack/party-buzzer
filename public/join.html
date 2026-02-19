@@ -39,14 +39,22 @@
       <p id="waitingText" class="hint">En attente du lancement de la partie par l'admin…</p>
     </section>
 
-    <section id="playerScoreCard" class="card player-score-card" style="display:none;">
-      <div class="player-score-label">Votre score</div>
-      <div id="playerScoreValue" class="player-score-value">0</div>
+    <section id="playerHeaderCard" class="card player-header-card" style="display:none;">
+      <div class="player-header-top">
+        <div class="player-header-identity">
+          <div id="joinedAvatar" class="player-identity-avatar">🙂</div>
+          <div>
+            <div class="player-header-label">Pseudo</div>
+            <div id="joinedNameTop" class="player-header-name">Joueur</div>
+          </div>
+        </div>
+        <div class="player-header-score">
+          <div class="player-score-label">Score</div>
+          <div id="playerScoreValue" class="player-score-value">0</div>
+        </div>
+      </div>
+      <div class="player-current-mode">Jeu en cours : <strong id="currentModeLabel">-</strong></div>
     </section>
-
-    <section id="playerIdentityCard" class="card player-identity-card" style="display:none;">
-      <div id="joinedAvatar" class="player-identity-avatar">J</div>
-          </section>
 
     <!-- Buzzer -->
     <section id="buzzerPanel" class="card" style="display:none;">
@@ -121,10 +129,11 @@
     const elWaitingPanel = document.getElementById('waitingPanel');
     const elWaitingText = document.getElementById('waitingText');
     const elAnswerAck = document.getElementById('answerAck');
-    const elPlayerScoreCard = document.getElementById('playerScoreCard');
+    const elPlayerHeaderCard = document.getElementById('playerHeaderCard');
     const elPlayerScoreValue = document.getElementById('playerScoreValue');
-    const elPlayerIdentityCard = document.getElementById('playerIdentityCard');
     const elJoinedAvatar = document.getElementById('joinedAvatar');
+    const elJoinedNameTop = document.getElementById('joinedNameTop');
+    const elCurrentModeLabel = document.getElementById('currentModeLabel');
 
     // Buzzer
     const elBuzzerPanel = document.getElementById('buzzerPanel');
@@ -188,6 +197,21 @@
       return (a + b).toUpperCase() || (String(name || 'J')[0] || 'J').toUpperCase();
     }
 
+
+    function randomAvatar() {
+      const avatars = ['🐼','🦊','🐸','🐵','🦁','🐧','🐨','🐯','🦄','🐙','🐻','🐤'];
+      return avatars[Math.floor(Math.random() * avatars.length)];
+    }
+
+    function modeLabel(mode) {
+      if (mode === 'buzzer') return 'Buzzer';
+      if (mode === 'quiz') return 'Quiz Vrai/Faux';
+      if (mode === 'guess') return 'Devine le nombre';
+      if (mode === 'free') return 'Réponse libre';
+      if (mode === 'most') return 'Qui est le plus';
+      return mode || '-';
+    }
+
     function setBuzzEnabled(on) { elBuzz.disabled = !on; elBuzz.style.opacity = on ? '1' : '0.6'; }
     function setQuizEnabled(on) {
       elBtnTrue.disabled = !on; elBtnFalse.disabled = !on;
@@ -203,6 +227,7 @@
       elGuessPanel.style.display = (mode === 'guess' && hasActiveQuestion) ? '' : 'none';
       elFreePanel.style.display = (mode === 'free' && hasActiveQuestion) ? '' : 'none';
       elMostPanel.style.display = (mode === 'most' && hasActiveQuestion) ? '' : 'none';
+      elCurrentModeLabel.textContent = modeLabel(mode);
       if (!hasActiveQuestion) elWaitingText.textContent = `Mode ${mode} — en attente du lancement Admin…`;
     }
 
@@ -260,10 +285,10 @@
         elJoinedTeamDot.style.background = teamColor;
         elForm.style.display = 'none';
         elWaitingPanel.style.display = '';
-        elPlayerScoreCard.style.display = '';
-        elPlayerIdentityCard.style.display = '';
+        elPlayerHeaderCard.style.display = '';
         if (elJoinTitle) elJoinTitle.textContent = res.name;
-        elJoinedAvatar.textContent = initials(res.name);
+        elJoinedNameTop.textContent = res.name;
+        elJoinedAvatar.textContent = randomAvatar();
         elJoinedAvatar.style.background = teamColor;
         elWaitingText.textContent = "Connecté. En attente du lancement de la partie par l'admin…";
       });

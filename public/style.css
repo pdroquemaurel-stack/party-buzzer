@@ -589,3 +589,12 @@ input[type="range"]::-moz-range-thumb {
   box-shadow: 0 8px 0 #0e9e4c, 0 12px 24px rgba(0,0,0,.3);
   color: #06210f;
 }
+
+
+.player-header-card { display:grid; gap:.7rem; }
+.player-header-top { display:flex; justify-content:space-between; align-items:center; gap:.8rem; }
+.player-header-identity { display:flex; align-items:center; gap:.7rem; }
+.player-header-label { font-size:.8rem; color: var(--muted); font-weight:700; }
+.player-header-name { font-size:1.05rem; font-weight:900; }
+.player-header-score { text-align:right; min-width:88px; }
+.player-current-mode { font-size:.95rem; color: var(--muted); }
