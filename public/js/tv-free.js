@@ -3,6 +3,33 @@ import { GameRegistry, Core } from './tv-core.js';
 
 let bank = [];
 
+let bankLoadingPromise = null;
+
+async function loadFreeBankIfNeeded(infoEl) {
+  if (bank.length) {
+    if (infoEl) infoEl.textContent = `${bank.length} question(s) disponible(s).`;
+    return bank;
+  }
+  if (!bankLoadingPromise) {
+    bankLoadingPromise = fetch('/free-questions.json', { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((data) => {
+        bank = Array.isArray(data) ? data : [];
+        return bank;
+      })
+      .catch(() => {
+        bank = [];
+        return bank;
+      })
+      .finally(() => {
+        bankLoadingPromise = null;
+      });
+  }
+  const items = await bankLoadingPromise;
+  if (infoEl) infoEl.textContent = `${items.length} question(s) disponible(s).`;
+  return items;
+}
+
 function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
 
 function normalizeFreeSeconds(v) {
@@ -85,7 +112,6 @@ function renderAnswersList(listEl, items, context) {
 
 GameRegistry.register('free', {
   onEnter() {
-    const loadBtn = document.getElementById('freeLoadBtn');
     const loadedInfo = document.getElementById('freeLoadedInfo');
     const qInput = document.getElementById('freeQuestion');
     const sInput = document.getElementById('freeSeconds');
@@ -95,20 +121,10 @@ GameRegistry.register('free', {
     const seriesBtn = document.getElementById('freeSeriesBtn');
     const info = document.getElementById('freeInfo');
 
-    if (!loadBtn._wired) {
-      loadBtn._wired = true;
-      loadBtn.addEventListener('click', async () => {
-        try {
-          const res = await fetch('/free-questions.json', { cache: 'no-store' });
-          const data = await res.json();
-          bank = Array.isArray(data) ? data : [];
-          loadedInfo.textContent = `${bank.length} question(s) chargée(s).`;
-        } catch {
-          alert('Impossible de charger /free-questions.json');
-          bank = [];
-          loadedInfo.textContent = '';
-        }
-      });
+    loadFreeBankIfNeeded(loadedInfo);
+
+    if (!startBtn._wired) {
+      startBtn._wired = true;
 
       startBtn.addEventListener('click', () => {
         const q = qInput.value.trim();
@@ -121,7 +137,7 @@ GameRegistry.register('free', {
       });
 
       randAskBtn.addEventListener('click', () => {
-        if (!bank.length) { alert('Charge la banque'); return; }
+        if (!bank.length) { alert('Banque indisponible'); return; }
         const item = bank[Math.floor(Math.random() * bank.length)];
         const q = item.q || '';
         if (!q) return;
@@ -133,7 +149,7 @@ GameRegistry.register('free', {
       });
 
       seriesBtn.addEventListener('click', () => {
-        if (!bank.length) { alert('Charge la banque'); return; }
+        if (!bank.length) { alert('Banque indisponible'); return; }
         const count = Math.max(1, Math.min(50, parseInt(countInput.value || '20', 10)));
         const seconds = normalizeFreeSeconds(sInput.value || '10');
         const items = pickRandomFreeItems(bank, count, seconds);
@@ -156,6 +172,7 @@ GameRegistry.register('free', {
       });
       document.getElementById('freeReviewCloseBtn')?.addEventListener('click', () => {
         Core.els.freeReviewOverlay.classList.remove('show');
+        Core.socket.emit('room:lock', true);
       });
     }
   },
