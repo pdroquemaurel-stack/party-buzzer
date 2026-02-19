@@ -94,6 +94,16 @@
       </div>
     </section>
 
+    <!-- Qui est le plus -->
+    <section id="mostPanel" class="card" style="display:none;">
+      <p><strong id="mostQ"></strong></p>
+      <div class="field">
+        <label>Qui est le plus...</label>
+        <div id="mostChoices" class="most-choices"></div>
+      </div>
+      <p id="mostInfo" class="hint"></p>
+    </section>
+
     <div id="answerAck" class="answer-ack" style="display:none;"></div>
 
   </main>
@@ -148,13 +158,19 @@
     const elFreeSendBtn = document.getElementById('freeSendBtn');
     const elFreeInfo = document.getElementById('freeInfo');
 
+    // Most
+    const elMostPanel = document.getElementById('mostPanel');
+    const elMostQ = document.getElementById('mostQ');
+    const elMostChoices = document.getElementById('mostChoices');
+    const elMostInfo = document.getElementById('mostInfo');
+
     if (roomParam) elRoom.value = roomParam;
 
     let socket = null;
     let currentMode = 'buzzer';
     let cdInt = null;
     let quizAnswered = null;
-    let questionActive = { quiz: false, guess: false, free: false, buzzer: false };
+    let questionActive = { quiz: false, guess: false, free: false, most: false, buzzer: false };
     let myPlayerName = '';
 
     // Guess auto-send
@@ -188,6 +204,7 @@
       elQuizPanel.style.display = (mode === 'quiz' && hasActiveQuestion) ? '' : 'none';
       elGuessPanel.style.display = (mode === 'guess' && hasActiveQuestion) ? '' : 'none';
       elFreePanel.style.display = (mode === 'free' && hasActiveQuestion) ? '' : 'none';
+      elMostPanel.style.display = (mode === 'most' && hasActiveQuestion) ? '' : 'none';
       if (!hasActiveQuestion) elWaitingText.textContent = `Mode ${mode} — en attente du lancement Admin…`;
     }
 
@@ -262,7 +279,7 @@
 
       socket.on('room:state', ({ locked }) => {
         if (locked) {
-          questionActive = { quiz: false, guess: false, free: false, buzzer: false };
+          questionActive = { quiz: false, guess: false, free: false, most: false, buzzer: false };
           setModeUI(currentMode);
           elWaitingPanel.style.display = '';
           elWaitingText.textContent = "La salle est fermée par l'admin.";
@@ -271,7 +288,7 @@
 
       // Mode
       socket.on('mode:changed', ({ mode }) => {
-        questionActive = { quiz: false, guess: false, free: false, buzzer: false };
+        questionActive = { quiz: false, guess: false, free: false, most: false, buzzer: false };
         setModeUI(mode);
         clearSubmitted();
         if (mode === 'buzzer') {
@@ -286,6 +303,9 @@
         } else if (mode === 'free') {
           elFreeText.value = '';
           elFreeInfo.textContent = 'Mode Réponse libre — en attente de la question...';
+        } else if (mode === 'most') {
+          elMostInfo.textContent = 'Mode Qui est le plus — en attente de la question...';
+          elMostChoices.innerHTML = '';
         }
       });
 
@@ -312,6 +332,8 @@
             const text = elFreeText.value.trim();
             socket && socket.emit('free:answer', { text }, () => {});
           }, Math.max(0, (seconds * 1000) - 300));
+        } else if (currentMode === 'most') {
+          elMostInfo.textContent = 'Temps restant: ' + remain + 's';
         }
         cdInt = setInterval(() => {
           remain--;
@@ -320,6 +342,7 @@
             else if (currentMode === 'quiz') elQuizInfo.textContent = 'Temps restant: ' + remain + 's';
             else if (currentMode === 'guess') elGuessInfo.textContent = 'Temps restant: ' + remain + 's';
             else if (currentMode === 'free') elFreeInfo.textContent = 'Temps restant: ' + remain + 's';
+            else if (currentMode === 'most') elMostInfo.textContent = 'Temps restant: ' + remain + 's';
           } else {
             stopCountdown();
           }
@@ -331,12 +354,13 @@
       socket.on('round:winner', (data) => { questionActive.buzzer = false; setBuzzEnabled(false); elRoundState.textContent = `Gagnant: ${data.name}`; setModeUI('buzzer'); });
       socket.on('round:reset', () => {
         stopCountdown();
-        questionActive = { quiz: false, guess: false, free: false, buzzer: false };
+        questionActive = { quiz: false, guess: false, free: false, most: false, buzzer: false };
         setModeUI(currentMode);
         if (currentMode === 'buzzer') { setBuzzEnabled(false); elRoundState.textContent = 'Tour réinitialisé. En attente...'; }
         if (currentMode === 'quiz') { setQuizEnabled(false); elQuizInfo.textContent = 'Question réinitialisée. En attente...'; }
         if (currentMode === 'guess') { elGuessInfo.textContent = 'Question réinitialisée. En attente...'; myGuess = null; clearTimeout(autoFinalTimer); autoFinalTimer = null; }
         if (currentMode === 'free') { elFreeInfo.textContent = 'Question réinitialisée. En attente...'; }
+        if (currentMode === 'most') { elMostInfo.textContent = 'Question réinitialisée. En attente...'; elMostChoices.innerHTML = ''; }
       });
 
       // Quiz
@@ -386,6 +410,33 @@
       socket.on('free:results', () => {
         questionActive.free = false;
         setModeUI('free');
+      });
+
+      // Most
+      socket.on('most:question', ({ question, seconds, choices }) => {
+        questionActive.most = true;
+        setModeUI('most');
+        clearSubmitted();
+        elMostQ.textContent = question;
+        elMostInfo.textContent = `Vote en cours (${seconds}s)`;
+        elMostChoices.innerHTML = '';
+        (choices || []).forEach((name) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.textContent = name;
+          btn.addEventListener('click', () => {
+            if (!socket) return;
+            socket.emit('most:vote', { target: name }, (res) => {
+              if (res && res.ok) markSubmitted(`✅ Vote enregistré : ${name}`);
+            });
+          });
+          elMostChoices.appendChild(btn);
+        });
+      });
+      socket.on('most:result', () => {
+        questionActive.most = false;
+        setModeUI('most');
+        elMostInfo.textContent = 'Vote terminé.';
       });
 
       socket.on('player:kicked', () => {
