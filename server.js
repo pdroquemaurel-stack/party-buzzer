@@ -21,6 +21,7 @@ const PORT = process.env.PORT || 3000;
 const publicDir = path.join(__dirname, 'public');
 const ROOM_CODE_RE = /^[A-Z0-9]{4,8}$/;
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
+const SESSION_COOKIE = 'party_tv_room';
 const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
 const ROOM_TTL_MS = 30 * 60 * 1000;
 const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
@@ -39,6 +40,19 @@ function parseRoomCode(raw) {
   const code = String(raw || '').toUpperCase().trim();
   if (!ROOM_CODE_RE.test(code)) return '';
   return code;
+}
+
+function parseCookies(req) {
+  const raw = String((req && req.headers && req.headers.cookie) || '');
+  if (!raw) return {};
+  return raw.split(';').reduce((acc, part) => {
+    const idx = part.indexOf('=');
+    if (idx <= 0) return acc;
+    const key = part.slice(0, idx).trim();
+    const val = decodeURIComponent(part.slice(idx + 1).trim());
+    if (key) acc[key] = val;
+    return acc;
+  }, {});
 }
 
 function createRateLimiter(limit, windowMs) {
@@ -82,7 +96,20 @@ function serveStatic(req, res) {
     return;
   }
   if (urlPath === '/') urlPath = '/index.html';
-  if (urlPath === '/tv') urlPath = '/tv.html';
+  if (urlPath === '/tv') {
+    const cookies = parseCookies(req);
+    const savedRoom = parseRoomCode(cookies[SESSION_COOKIE]);
+    if (savedRoom) {
+      setSecurityHeaders(res);
+      res.writeHead(302, {
+        Location: '/tv.html?room=' + encodeURIComponent(savedRoom),
+        'Set-Cookie': SESSION_COOKIE + '=; Max-Age=0; Path=/; SameSite=Lax'
+      });
+      res.end();
+      return;
+    }
+    urlPath = '/tv.html';
+  }
   if (urlPath === '/join') urlPath = '/join.html';
 
   const resolvedPath = path.resolve(publicDir, '.' + urlPath);
@@ -246,6 +273,20 @@ io.on('connection', (socket) => {
     ack && ack({ ok: true, name: finalName });
     socket.emit('mode:changed', { mode: r.gameId });
     broadcastPlayers(code);
+  });
+
+  socket.on('tv:remember', ({ room }, ack) => {
+    if (role !== 'tv') { ack && ack({ ok: false }); return; }
+    const code = parseRoomCode(room);
+    if (!code) { ack && ack({ ok: false, error: 'invalid_room' }); return; }
+    roomCode = code;
+    const r = getRoom(code);
+    socket.join(code);
+    socket.emit('room:ready', { code });
+    socket.emit('mode:changed', { mode: r.gameId });
+    broadcastPlayers(code);
+    broadcastRoomState(code);
+    ack && ack({ ok: true, code });
   });
 
   // Verrouillage manuel (optionnel)
@@ -444,6 +485,27 @@ io.on('connection', (socket) => {
     if (r.gameId !== 'free') return;
     games.free.adminSeriesGotoIndex(io, r, roomCode, index);
     touchRoom(r);
+  });
+
+  socket.on('player:kick', ({ name }) => {
+    if (role !== 'tv' || !roomCode) return;
+    const r = getRoom(roomCode);
+    const target = String(name || '').trim();
+    if (!target) return;
+    let targetSocket = null;
+    r.players.forEach((p, sid) => {
+      if (!targetSocket && p.name === target) targetSocket = sid;
+    });
+    if (!targetSocket) return;
+    const targetSock = io.sockets.sockets.get(targetSocket);
+    if (targetSock) {
+      targetSock.emit('player:kicked');
+      targetSock.leave(roomCode);
+      targetSock.disconnect(true);
+    }
+    r.players.delete(targetSocket);
+    touchRoom(r);
+    broadcastPlayers(roomCode);
   });
 
   socket.on('disconnect', () => {
