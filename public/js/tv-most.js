@@ -1,6 +1,21 @@
 // public/js/tv-most.js
 import { GameRegistry, Core } from './tv-core.js';
 
+let bank = [];
+
+function pickRandomQuestion() {
+  if (!bank.length) return '';
+  const item = bank[Math.floor(Math.random() * bank.length)];
+  if (typeof item === 'string') return item;
+  return String(item && item.q || '').trim();
+}
+
+function startMostRound(question, seconds) {
+  Core.socket.emit('most:start', { question, seconds });
+  Core.socket.emit('countdown:start', seconds);
+  setTimeout(() => Core.socket.emit('most:close'), seconds * 1000);
+}
+
 function renderPodium(podium) {
   const container = document.getElementById('mostPodium');
   container.innerHTML = '';
@@ -24,11 +39,28 @@ function renderPodium(podium) {
 
 GameRegistry.register('most', {
   onEnter() {
+    const loadBtn = document.getElementById('mostLoadBtn');
+    const loadedInfo = document.getElementById('mostLoadedInfo');
     const startBtn = document.getElementById('mostStartBtn');
+    const randomBtn = document.getElementById('mostRandomAskBtn');
     const closeBtn = document.getElementById('mostResultCloseBtn');
 
     if (!startBtn._wired) {
       startBtn._wired = true;
+
+      loadBtn.addEventListener('click', async () => {
+        try {
+          const res = await fetch('/most-questions.json', { cache: 'no-store' });
+          const data = await res.json();
+          bank = Array.isArray(data) ? data : [];
+          loadedInfo.textContent = `${bank.length} question(s) chargée(s).`;
+        } catch {
+          bank = [];
+          loadedInfo.textContent = '';
+          alert('Impossible de charger /most-questions.json');
+        }
+      });
+
       startBtn.addEventListener('click', () => {
         const question = document.getElementById('mostQuestion').value.trim();
         const seconds = Math.max(5, Math.min(30, parseInt(document.getElementById('mostSeconds').value || '15', 10)));
@@ -36,9 +68,18 @@ GameRegistry.register('most', {
           alert('Entre une question "Qui est le plus..."');
           return;
         }
-        Core.socket.emit('most:start', { question, seconds });
-        Core.socket.emit('countdown:start', seconds);
-        setTimeout(() => Core.socket.emit('most:close'), seconds * 1000);
+        startMostRound(question, seconds);
+      });
+
+      randomBtn.addEventListener('click', () => {
+        const seconds = Math.max(5, Math.min(30, parseInt(document.getElementById('mostSeconds').value || '15', 10)));
+        const question = pickRandomQuestion();
+        if (!question) {
+          alert('Charge la banque de questions');
+          return;
+        }
+        document.getElementById('mostQuestion').value = question;
+        startMostRound(question, seconds);
       });
     }
 

@@ -582,3 +582,10 @@ input[type="range"]::-moz-range-thumb {
 .podium-medal { font-size: 2rem; }
 .podium-name { font-weight: 900; font-size: 1.2rem; margin-top: .4rem; }
 .podium-votes { color: var(--muted); font-weight: 700; }
+
+
+.most-choices button.is-voted {
+  background: linear-gradient(180deg, #78ff9a, #00e676);
+  box-shadow: 0 8px 0 #0e9e4c, 0 12px 24px rgba(0,0,0,.3);
+  color: #06210f;
+}

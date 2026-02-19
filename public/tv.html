@@ -206,6 +206,15 @@
 
       <section id="mostPanel" class="card" style="display:none;" data-game-panel="most">
         <h2>Qui est le plus...</h2>
+
+        <div class="card soft">
+          <h3 style="margin-top:0;">Banque de questions</h3>
+          <div class="row btn-row">
+            <button id="mostLoadBtn">Charger banque</button>
+            <span id="mostLoadedInfo" class="hint"></span>
+          </div>
+        </div>
+
         <div class="field">
           <label>Question</label>
           <input id="mostQuestion" type="text" placeholder="Ex: Qui est le plus susceptible d'arriver en retard ?" />
@@ -216,6 +225,7 @@
         </div>
         <div class="row btn-row">
           <button id="mostStartBtn" class="btn-green">Lancer vote (15s)</button>
+          <button id="mostRandomAskBtn" class="btn-cyan">Question aléatoire</button>
         </div>
         <div id="mostInfo" class="row hint"></div>
       </section>

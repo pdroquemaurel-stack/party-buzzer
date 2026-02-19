@@ -46,8 +46,7 @@
 
     <section id="playerIdentityCard" class="card player-identity-card" style="display:none;">
       <div id="joinedAvatar" class="player-identity-avatar">J</div>
-      <div class="player-identity-name" id="joinedNameMobile">Joueur</div>
-    </section>
+          </section>
 
     <!-- Buzzer -->
     <section id="buzzerPanel" class="card" style="display:none;">
@@ -126,7 +125,6 @@
     const elPlayerScoreValue = document.getElementById('playerScoreValue');
     const elPlayerIdentityCard = document.getElementById('playerIdentityCard');
     const elJoinedAvatar = document.getElementById('joinedAvatar');
-    const elJoinedNameMobile = document.getElementById('joinedNameMobile');
 
     // Buzzer
     const elBuzzerPanel = document.getElementById('buzzerPanel');
@@ -264,7 +262,6 @@
         elWaitingPanel.style.display = '';
         elPlayerScoreCard.style.display = '';
         elPlayerIdentityCard.style.display = '';
-        elJoinedNameMobile.textContent = res.name;
         if (elJoinTitle) elJoinTitle.textContent = res.name;
         elJoinedAvatar.textContent = initials(res.name);
         elJoinedAvatar.style.background = teamColor;
@@ -427,7 +424,11 @@
           btn.addEventListener('click', () => {
             if (!socket) return;
             socket.emit('most:vote', { target: name }, (res) => {
-              if (res && res.ok) markSubmitted(`✅ Vote enregistré : ${name}`);
+              if (res && res.ok) {
+                markSubmitted(`✅ Vote enregistré : ${name}`);
+                elMostChoices.querySelectorAll('button').forEach((b) => b.classList.remove('is-voted'));
+                btn.classList.add('is-voted');
+              }
             });
           });
           elMostChoices.appendChild(btn);
