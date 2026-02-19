@@ -14,8 +14,9 @@ GameRegistry.register('buzzer', {
     if (!startBtn._wired) {
       startBtn._wired = true;
       startBtn.addEventListener('click', () => {
-        // 3-2-1 puis ouverture du tour
-        Core.startCountdown(3, () => Core.socket.emit('buzz:open'));
+        // Ouverture immédiate du tour au clic animateur
+        Core.socket.emit('buzz:open');
+        Core.setStatus('Tour ouvert: buzz autorisé immédiatement.');
       });
     }
     if (!resetBtn._wired) {

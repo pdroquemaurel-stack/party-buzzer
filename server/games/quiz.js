@@ -37,10 +37,21 @@ module.exports = {
 
     let countTrue = 0, countFalse = 0;
     const winners = [];
+    const losers = [];
+    const answeredNames = [];
+
     g.answers.forEach((ans, name) => {
+      answeredNames.push(name);
       if (ans) countTrue++; else countFalse++;
       if (ans === g.correct) winners.push(name);
+      else losers.push(name);
     });
+
+    const allPlayers = new Set([
+      ...Array.from(room.scores.keys()),
+      ...Array.from(room.players.values()).map((p) => p.name)
+    ]);
+    const noAnswer = Array.from(allPlayers).filter((name) => !g.answers.has(name));
 
     winners.forEach(name => {
       room.scores.set(name, (room.scores.get(name) || 0) + 1);
@@ -50,7 +61,10 @@ module.exports = {
       correct: g.correct,
       countTrue,
       countFalse,
-      total: countTrue + countFalse
+      total: countTrue + countFalse,
+      winners,
+      losers,
+      noAnswer
     });
     broadcastPlayers(code);
   }
