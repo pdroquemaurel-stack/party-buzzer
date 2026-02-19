@@ -532,3 +532,8 @@ input[type="range"]::-moz-range-thumb {
   border-radius: 10px;
   padding: .55rem .6rem;
 }
+
+
+.player-score-card { text-align: center; }
+.player-score-label { font-size: .9rem; color: var(--muted); font-weight: 700; }
+.player-score-value { font-size: clamp(2rem, 8vw, 2.8rem); font-weight: 900; color: var(--primary); text-shadow: 0 2px 0 rgba(0,0,0,.35); line-height: 1; }

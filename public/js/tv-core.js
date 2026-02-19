@@ -78,6 +78,11 @@ export const Core = (() => {
     return out;
   }
 
+  function isForceNewRoom() {
+    const qs = new URLSearchParams(window.location.search);
+    return qs.get('new') === '1';
+  }
+
   function getRequestedRoom() {
     const qs = new URLSearchParams(window.location.search);
     const roomFromUrl = String(qs.get('room') || '').toUpperCase().trim();
@@ -419,7 +424,9 @@ export const Core = (() => {
 
   // UI init
   window.addEventListener('DOMContentLoaded', () => {
-    const remembered = getRequestedRoom();
+    const forceNew = isForceNewRoom();
+    if (forceNew) clearPersistedRoom();
+    const remembered = forceNew ? '' : getRequestedRoom();
     room = remembered || room;
     renderInvite();
     const openRoom = remembered ? 'tv:remember' : 'tv:create_room';

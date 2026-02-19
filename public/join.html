@@ -39,6 +39,11 @@
       <p id="waitingText" class="hint">En attente du lancement de la partie par l'admin…</p>
     </section>
 
+    <section id="playerScoreCard" class="card player-score-card" style="display:none;">
+      <div class="player-score-label">Votre score</div>
+      <div id="playerScoreValue" class="player-score-value">0</div>
+    </section>
+
     <!-- Buzzer -->
     <section id="buzzerPanel" class="card" style="display:none;">
       <p>Salle: <strong id="joinedRoom"></strong> — Pseudo: <strong id="joinedPseudo"></strong> <span id="joinedTeamDot" class="team-dot"></span></p>
@@ -102,6 +107,8 @@
     const elWaitingPanel = document.getElementById('waitingPanel');
     const elWaitingText = document.getElementById('waitingText');
     const elAnswerAck = document.getElementById('answerAck');
+    const elPlayerScoreCard = document.getElementById('playerScoreCard');
+    const elPlayerScoreValue = document.getElementById('playerScoreValue');
 
     // Buzzer
     const elBuzzerPanel = document.getElementById('buzzerPanel');
@@ -222,7 +229,13 @@
         elJoinedTeamDot.style.background = teamColor;
         elForm.style.display = 'none';
         elWaitingPanel.style.display = '';
+        elPlayerScoreCard.style.display = '';
         elWaitingText.textContent = "Connecté. En attente du lancement de la partie par l'admin…";
+      });
+
+      socket.on('room:players', (players) => {
+        const me = (players || []).find((p) => p.name === elJoinedPseudo.textContent);
+        if (me) elPlayerScoreValue.textContent = String(me.score ?? 0);
       });
 
       // Mode
