@@ -49,6 +49,9 @@
             Fermer la salle (bloquer les nouveaux joueurs)
           </label>
         </div>
+        <div class="row" style="margin-top:.55rem;">
+          <button id="gameBuilderBtn" class="btn-cyan" type="button">Créer une GAME</button>
+        </div>
 
         <div id="timerRing" class="timer-ring" style="display:none;">
           <div class="timer-value">0</div>
@@ -314,6 +317,44 @@
     </div>
   </div>
 
+  <div id="gameBuilderOverlay" class="overlay">
+    <div class="game-builder-card">
+      <div class="row" style="justify-content:space-between; align-items:center;">
+        <div class="label">Créer une GAME</div>
+        <button id="gameBuilderCloseBtn" type="button">Fermer</button>
+      </div>
+      <p class="hint" style="margin-top:.2rem;">À gauche, sélectionne les jeux. À droite, personnalise les réglages.</p>
+
+      <div class="game-builder-layout">
+        <section class="game-builder-column">
+          <h3 class="game-builder-title">Jeux disponibles</h3>
+          <div id="gameBuilderList" class="game-builder-list"></div>
+        </section>
+
+        <section class="game-builder-column">
+          <div class="row" style="justify-content:space-between; align-items:center; margin-bottom:.35rem;">
+            <h3 class="game-builder-title" style="margin:0;">Ma GAME</h3>
+            <div id="gameBuilderSummary" class="hint">Aucun jeu sélectionné</div>
+          </div>
+          <div id="gameBuilderConfig" class="game-builder-config"></div>
+        </section>
+      </div>
+
+      <div class="row btn-row" style="justify-content:flex-end; margin-top:.7rem;">
+        <button id="gameBuilderStartBtn" class="btn-green" type="button">Lancer la GAME</button>
+      </div>
+    </div>
+  </div>
+
+
+  <div id="gameShowStage" class="game-show-stage" aria-hidden="true">
+    <div class="game-show-host">🎤</div>
+    <div class="game-show-title">PLATEAU TV</div>
+    <div id="gameShowMode" class="game-show-mode">Mode GAME</div>
+    <div id="gameShowPhase" class="game-show-phase">Préparation</div>
+    <div id="gameShowQuestion" class="game-show-question">La question apparaîtra ici</div>
+  </div>
+
   <script src="/socket.io/socket.io.js"></script>
   <script type="module" src="/js/tv-core.js"></script>
   <script type="module" src="/js/tv-buzzer.js"></script>
@@ -321,5 +362,6 @@
   <script type="module" src="/js/tv-guess.js"></script>
   <script type="module" src="/js/tv-free.js"></script>
   <script type="module" src="/js/tv-most.js"></script>
+  <script type="module" src="/js/tv-game.js"></script>
 </body>
 </html>
