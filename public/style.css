@@ -695,3 +695,59 @@ input[type="range"]::-moz-range-thumb {
     grid-template-columns: 1fr;
   }
 }
+
+
+.game-show-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  display: none;
+  place-items: center;
+  text-align: center;
+  background: radial-gradient(120% 100% at 50% 10%, #2b3f8a 0%, #121a3a 45%, #070b1a 100%);
+  color: #fff;
+  padding: 1.2rem;
+}
+
+.game-show-stage.show { display: grid; }
+
+.game-show-host {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 3rem;
+  background: rgba(255,255,255,.12);
+  border: 2px solid rgba(255,255,255,.24);
+  box-shadow: 0 0 0 8px rgba(255,212,0,.15);
+}
+
+.game-show-title {
+  margin-top: .8rem;
+  font-size: .95rem;
+  letter-spacing: .32em;
+  color: #b8c6ff;
+  font-weight: 800;
+}
+
+.game-show-mode {
+  margin-top: .35rem;
+  font-size: clamp(1.4rem, 3.2vw, 2.4rem);
+  font-weight: 900;
+}
+
+.game-show-phase {
+  margin-top: .45rem;
+  color: #ffd400;
+  font-size: clamp(1.1rem, 2.6vw, 1.5rem);
+  font-weight: 800;
+}
+
+.game-show-question {
+  margin-top: .8rem;
+  max-width: min(1080px, 90vw);
+  font-size: clamp(1.5rem, 4vw, 3rem);
+  line-height: 1.22;
+  font-weight: 900;
+}

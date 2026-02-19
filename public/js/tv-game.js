@@ -44,6 +44,33 @@ function waitForSocketEvent(eventName, timeoutMs) {
   });
 }
 
+
+function stageEls() {
+  return {
+    root: document.getElementById('gameShowStage'),
+    mode: document.getElementById('gameShowMode'),
+    phase: document.getElementById('gameShowPhase'),
+    question: document.getElementById('gameShowQuestion')
+  };
+}
+
+function stageShow() {
+  const els = stageEls();
+  if (els.root) els.root.classList.add('show');
+}
+
+function stageHide() {
+  const els = stageEls();
+  if (els.root) els.root.classList.remove('show');
+}
+
+function stageUpdate({ mode, phase, question }) {
+  const els = stageEls();
+  if (els.mode && mode) els.mode.textContent = mode;
+  if (els.phase && phase) els.phase.textContent = phase;
+  if (els.question) els.question.textContent = question || '...';
+}
+
 function clamp(value, min, max, fallback) {
   const n = parseInt(value, 10);
   if (!Number.isFinite(n)) return fallback;
@@ -234,16 +261,17 @@ function closeBuilder() {
 
 async function runQuiz(item, seconds) {
   const q = String(item.q || '').trim();
-  if (!q) return;
+  if (!q) return '';
   Core.socket.emit('quiz:start', { question: q, correct: !!item.a, seconds });
   Core.socket.emit('countdown:start', seconds);
   await sleep(seconds * 1000);
   Core.socket.emit('quiz:close');
+  return q;
 }
 
 async function runGuess(item, seconds) {
   const q = String(item.q || '').trim();
-  if (!q) return;
+  if (!q) return '';
   const min = Number.isFinite(Number(item.min)) ? Number(item.min) : 0;
   const max = Number.isFinite(Number(item.max)) ? Number(item.max) : 100;
   const correct = Number.isFinite(Number(item.c)) ? Number(item.c) : min;
@@ -251,6 +279,7 @@ async function runGuess(item, seconds) {
   Core.socket.emit('countdown:start', seconds);
   await sleep(seconds * 1000);
   Core.socket.emit('guess:close');
+  return q;
 }
 
 async function runFreeSingle(item, seconds) {
@@ -278,16 +307,17 @@ async function runFreeSeries(step) {
 
   const reviewOpened = waitForSocketEvent('free:review_open', REVIEW_WAIT_TIMEOUT_MS).catch(() => null);
   Core.socket.emit('free:series:start', { items: questions });
-  await reviewOpened;
+  return await reviewOpened;
 }
 
 async function runMost(item, seconds) {
   const q = String(item.q || '').trim();
-  if (!q) return;
+  if (!q) return '';
   Core.socket.emit('most:start', { question: q, seconds });
   Core.socket.emit('countdown:start', seconds);
   await sleep(seconds * 1000);
   Core.socket.emit('most:close');
+  return q;
 }
 
 async function runGame(step, globalIndex, globalTotal) {
@@ -296,7 +326,10 @@ async function runGame(step, globalIndex, globalTotal) {
 
   if (def.id === 'free') {
     Core.showProgress(`GAME: ${globalIndex + 1}/${globalTotal} • ${def.label} (série + correction)`);
-    await runFreeSeries(step);
+    stageUpdate({ mode: def.label, phase: 'Questions en cours', question: 'Les joueurs répondent à toute la série...' });
+    const reviewPayload = await runFreeSeries(step);
+    const reviewQuestion = reviewPayload && reviewPayload.question ? reviewPayload.question : 'Correction en cours';
+    stageUpdate({ mode: def.label, phase: 'Correction', question: reviewQuestion });
     await sleep(RESULTS_VIEW_MS);
     return;
   }
@@ -306,11 +339,15 @@ async function runGame(step, globalIndex, globalTotal) {
   const questions = sample(bank, Math.min(step.count, bank.length));
   for (let i = 0; i < questions.length; i++) {
     if (state.stopRequested) return;
+    const current = questions[i];
+    const q = String(current && current.q || '').trim();
+    stageUpdate({ mode: def.label, phase: 'Question', question: q || 'Question en cours...' });
     Core.showProgress(`GAME: ${globalIndex + i + 1}/${globalTotal} • ${def.label}`);
-    if (def.id === 'quiz') await runQuiz(questions[i], step.seconds);
-    else if (def.id === 'guess') await runGuess(questions[i], step.seconds);
-    else if (def.id === 'free') await runFreeSingle(questions[i], step.seconds);
-    else if (def.id === 'most') await runMost(questions[i], step.seconds);
+    let askedQuestion = q;
+    if (def.id === 'quiz') askedQuestion = await runQuiz(current, step.seconds);
+    else if (def.id === 'guess') askedQuestion = await runGuess(current, step.seconds);
+    else if (def.id === 'most') askedQuestion = await runMost(current, step.seconds);
+    stageUpdate({ mode: def.label, phase: 'Correction', question: askedQuestion || q || 'Correction en cours' });
     await sleep(RESULTS_VIEW_MS);
   }
 }
@@ -326,6 +363,8 @@ async function startGamePlan() {
   closeBuilder();
   state.running = true;
   state.stopRequested = false;
+  stageShow();
+  stageUpdate({ mode: 'Mode GAME', phase: 'Lancement', question: 'Préparez-vous !' });
 
   try {
     const totalQuestions = plan.reduce((sum, p) => sum + p.count, 0);
@@ -342,6 +381,7 @@ async function startGamePlan() {
     await sleep(1400);
   } finally {
     Core.hideProgress();
+    stageHide();
     state.running = false;
     state.stopRequested = false;
   }
