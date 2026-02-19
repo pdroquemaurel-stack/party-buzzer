@@ -56,7 +56,8 @@ export const Core = (() => {
     progressBanner: createProgressBanner()
   };
 
-  const FIXED_BASE = 'https://party-buzzer.onrender.com';
+  const BASE_URL = (window.location && window.location.origin) || '';
+  const ADMIN_TOKEN = window.localStorage.getItem('party_admin_token') || '';
 
   // State
   let cdTimer = null;
@@ -87,12 +88,22 @@ export const Core = (() => {
   }
   function setStatus(text) { els.status.textContent = text || ''; }
 
-  function buildJoinUrl() { return FIXED_BASE + '/join?room=' + encodeURIComponent(room); }
+  function buildJoinUrl() { return BASE_URL + '/join?room=' + encodeURIComponent(room); }
   function renderInvite() {
     els.roomCode.textContent = room;
     const joinUrl = buildJoinUrl();
     els.qrLink.href = joinUrl;
+    els.qrLink.textContent = '';
     const qrApi = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=';
+    els.qr.onerror = () => {
+      els.qr.style.display = 'none';
+      els.qrLink.textContent = 'Ouvrir le lien de participation';
+      els.qrLink.classList.add('hint');
+    };
+    els.qr.onload = () => {
+      els.qr.style.display = 'block';
+      if (els.qrLink.textContent) els.qrLink.textContent = '';
+    };
     els.qr.src = qrApi + encodeURIComponent(joinUrl);
   }
 
@@ -326,7 +337,7 @@ export const Core = (() => {
   // UI init
   window.addEventListener('DOMContentLoaded', () => {
     renderInvite();
-    socket.emit('tv:create_room', room);
+    socket.emit('tv:create_room', { code: room, adminToken: ADMIN_TOKEN }, () => {});
 
     // Mode radios -> serveur
     els.modeSwitch.querySelectorAll('input[name="mode"]').forEach(radio => {
@@ -338,7 +349,7 @@ export const Core = (() => {
     els.regenBtn.addEventListener('click', () => {
       room = generateRoomCode(5);
       renderInvite();
-      socket.emit('tv:create_room', room);
+      socket.emit('tv:create_room', { code: room, adminToken: ADMIN_TOKEN }, () => {});
     });
 
     els.resetScoresBtn?.addEventListener('click', () => socket.emit('scores:reset'));
