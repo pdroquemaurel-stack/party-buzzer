@@ -598,3 +598,46 @@ input[type="range"]::-moz-range-thumb {
 .player-header-name { font-size:1.05rem; font-weight:900; }
 .player-header-score { text-align:right; min-width:88px; }
 .player-current-mode { font-size:.95rem; color: var(--muted); }
+
+
+.game-builder-card {
+  width: min(940px, 94vw);
+  max-height: 90vh;
+  overflow: auto;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,.26);
+  background: rgba(11,18,36,.95);
+  box-shadow: 0 20px 60px rgba(0,0,0,.45);
+  padding: 1rem;
+}
+
+.game-builder-rows {
+  display: grid;
+  gap: .6rem;
+  margin-top: .6rem;
+}
+
+.game-builder-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.2fr) 1fr 1fr;
+  gap: .6rem;
+  align-items: end;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 12px;
+  padding: .65rem;
+  background: rgba(255,255,255,.05);
+}
+
+.game-builder-row .field {
+  margin-bottom: 0;
+}
+
+.game-builder-row .field label {
+  font-size: .86rem;
+}
+
+@media (max-width: 760px) {
+  .game-builder-row {
+    grid-template-columns: 1fr;
+  }
+}
