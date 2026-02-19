@@ -126,6 +126,11 @@ GameRegistry.register('guess', {
     const who = names.length ? shown + more : 'Aucun';
     const detail = (bestDiff === null) ? '' : ` — meilleur écart: ${bestDiff}${tol ? `, tolérance≈±${tol}` : ''}`;
     document.getElementById('guessInfo').textContent = `Réponse: ${correct} — Gagnants: ${who}${detail}`;
+    Core.showResultsOverlay(`Devine: réponse = ${correct}`, [
+      { type: 'good', label: `🟢 Gagnants: ${who}` },
+      { type: 'none', label: `⚪ Tolérance: ±${tol || 0}` },
+      { type: (bestDiff === null ? 'none' : 'bad'), label: bestDiff === null ? '⚪ Aucune réponse envoyée' : `🔴 Meilleur écart: ${bestDiff}` }
+    ]);
   },
   onClose() {}
 });
