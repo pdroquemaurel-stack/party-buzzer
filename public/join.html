@@ -8,7 +8,7 @@
 </head>
 <body>
   <main class="container">
-    <h1>Rejoindre la partie</h1>
+    <h1 id="joinTitle">Rejoindre la partie</h1>
 
     <form id="joinForm" class="card" onsubmit="return false;">
       <div class="field">
@@ -44,9 +44,14 @@
       <div id="playerScoreValue" class="player-score-value">0</div>
     </section>
 
+    <section id="playerIdentityCard" class="card player-identity-card" style="display:none;">
+      <div id="joinedAvatar" class="player-identity-avatar">J</div>
+      <div class="player-identity-name" id="joinedNameMobile">Joueur</div>
+    </section>
+
     <!-- Buzzer -->
     <section id="buzzerPanel" class="card" style="display:none;">
-      <p>Salle: <strong id="joinedRoom"></strong> — Pseudo: <strong id="joinedPseudo"></strong> <span id="joinedTeamDot" class="team-dot"></span></p>
+      <p>Salle: <strong id="joinedRoom"></strong> <span id="joinedTeamDot" class="team-dot"></span></p>
       <button id="buzzBtn" style="font-size:1.4rem;padding:1rem 2rem; width:100%;">BUZZ</button>
       <p id="roundState" class="hint"></p>
       <p><a href="/join">Changer de pseudo/salle</a></p>
@@ -101,6 +106,7 @@
     const elRoom = document.getElementById('room');
     const elPseudo = document.getElementById('pseudo');
     const elJoinBtn = document.getElementById('joinBtn');
+    const elJoinTitle = document.getElementById('joinTitle');
     const elTeamPicker = document.getElementById('teamPicker');
     const elForm = document.getElementById('joinForm');
     const elWaitingPanel = document.getElementById('waitingPanel');
@@ -108,11 +114,13 @@
     const elAnswerAck = document.getElementById('answerAck');
     const elPlayerScoreCard = document.getElementById('playerScoreCard');
     const elPlayerScoreValue = document.getElementById('playerScoreValue');
+    const elPlayerIdentityCard = document.getElementById('playerIdentityCard');
+    const elJoinedAvatar = document.getElementById('joinedAvatar');
+    const elJoinedNameMobile = document.getElementById('joinedNameMobile');
 
     // Buzzer
     const elBuzzerPanel = document.getElementById('buzzerPanel');
     const elJoinedRoom = document.getElementById('joinedRoom');
-    const elJoinedPseudo = document.getElementById('joinedPseudo');
     const elJoinedTeamDot = document.getElementById('joinedTeamDot');
     const elBuzz = document.getElementById('buzzBtn');
     const elRoundState = document.getElementById('roundState');
@@ -147,6 +155,7 @@
     let cdInt = null;
     let quizAnswered = null;
     let questionActive = { quiz: false, guess: false, free: false, buzzer: false };
+    let myPlayerName = '';
 
     // Guess auto-send
     let myGuess = null;
@@ -155,6 +164,14 @@
     function debounce(fn, wait) {
       let t = null;
       return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
+    }
+
+
+    function initials(name) {
+      const parts = String(name || '').trim().split(/\s+/);
+      const a = (parts[0] || '').charAt(0) || '';
+      const b = (parts[1] || '').charAt(0) || '';
+      return (a + b).toUpperCase() || (String(name || 'J')[0] || 'J').toUpperCase();
     }
 
     function setBuzzEnabled(on) { elBuzz.disabled = !on; elBuzz.style.opacity = on ? '1' : '0.6'; }
@@ -224,17 +241,32 @@
         }
 
         elJoinedRoom.textContent = room;
-        elJoinedPseudo.textContent = res.name;
+        myPlayerName = res.name;
         elJoinedTeamDot.style.background = teamColor;
         elForm.style.display = 'none';
         elWaitingPanel.style.display = '';
         elPlayerScoreCard.style.display = '';
+        elPlayerIdentityCard.style.display = '';
+        elJoinedNameMobile.textContent = res.name;
+        if (elJoinTitle) elJoinTitle.textContent = res.name;
+        elJoinedAvatar.textContent = initials(res.name);
+        elJoinedAvatar.style.background = teamColor;
         elWaitingText.textContent = "Connecté. En attente du lancement de la partie par l'admin…";
       });
 
       socket.on('room:players', (players) => {
-        const me = (players || []).find((p) => p.name === elJoinedPseudo.textContent);
+        const me = (players || []).find((p) => p.name === myPlayerName);
         if (me) elPlayerScoreValue.textContent = String(me.score ?? 0);
+      });
+
+
+      socket.on('room:state', ({ locked }) => {
+        if (locked) {
+          questionActive = { quiz: false, guess: false, free: false, buzzer: false };
+          setModeUI(currentMode);
+          elWaitingPanel.style.display = '';
+          elWaitingText.textContent = "La salle est fermée par l'admin.";
+        }
       });
 
       // Mode
@@ -337,7 +369,7 @@
       socket.on('guess:result', ({ correct, winners }) => {
         questionActive.guess = false;
         setModeUI('guess');
-        const me = (myGuess == null) ? '' : (Array.isArray(winners) && winners.includes(elJoinedPseudo.textContent) ? ' — Bravo !' : ' — Dommage.');
+        const me = (myGuess == null) ? '' : (Array.isArray(winners) && winners.includes(myPlayerName) ? ' — Bravo !' : ' — Dommage.');
         elGuessInfo.textContent = `Réponse: ${correct}${me}`;
         clearTimeout(autoFinalTimer); autoFinalTimer = null;
       });
