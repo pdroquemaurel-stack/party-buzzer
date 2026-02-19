@@ -333,7 +333,8 @@ export const Core = (() => {
       mode === 'buzzer' ? 'Mode Buzzer' :
       mode === 'quiz' ? 'Mode Quiz' :
       mode === 'guess' ? 'Mode Devine' :
-      mode === 'free' ? 'Mode Réponse libre' : `Mode ${mode}`
+      mode === 'free' ? 'Mode Réponse libre' :
+      mode === 'most' ? 'Mode Qui est le plus' : `Mode ${mode}`
     );
     const selected = els.modeSwitch.querySelector(`input[name="mode"][value="${mode}"]`);
     if (selected) selected.checked = true;
@@ -433,6 +434,19 @@ export const Core = (() => {
   });
   socket.on(EVENTS.FREE_REVIEW_VALIDATED, ({ name, validated }) => {
     emitGameEvent(GAME_EVENTS.PROGRESS, { name, validated, context: 'review' });
+  });
+
+
+  // Most
+  socket.on(EVENTS.MOST_QUESTION, ({ question, seconds }) => {
+    setModeUI('most');
+    showQuestionOverlay(question, seconds, false);
+    emitGameEvent(GAME_EVENTS.QUESTION, { question, seconds });
+  });
+  socket.on(EVENTS.MOST_RESULT, (payload) => {
+    hideQuestionOverlay();
+    emitGameEvent(GAME_EVENTS.RESULT, payload);
+    hideProgress();
   });
 
   // UI init

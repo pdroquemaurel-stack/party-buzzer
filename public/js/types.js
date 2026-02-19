@@ -27,6 +27,10 @@ export const EVENTS = {
   FREE_VALIDATED: 'free:validated',
   FREE_REVIEW_OPEN: 'free:review_open',
   FREE_REVIEW_VALIDATED: 'free:review_validated',
+
+  // Qui est le plus
+  MOST_QUESTION: 'most:question',
+  MOST_RESULT: 'most:result',
 };
 
 // Normalisation côté TV: événements "génériques" utilisés par les modules

@@ -551,3 +551,50 @@ input[type="range"]::-moz-range-thumb {
 #freeReviewOverlay .free-answer-card.validated {
   background: rgba(0,90,45,.5);
 }
+
+/* Most (qui est le plus) */
+.most-choices {
+  display: grid;
+  gap: .55rem;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.most-podium {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(140px, 1fr));
+  gap: 1rem;
+  align-items: end;
+}
+
+.podium-step {
+  border-radius: 16px;
+  border: 2px solid rgba(255,255,255,.2);
+  background: rgba(255,255,255,.08);
+  padding: .8rem;
+  min-height: 150px;
+  display: grid;
+  align-content: end;
+  text-align: center;
+}
+.podium-step.gold { min-height: 220px; border-color: #ffd400; }
+.podium-step.silver { min-height: 185px; border-color: #d6dee7; }
+.podium-step.bronze { min-height: 165px; border-color: #cd7f32; }
+.podium-medal { font-size: 2rem; }
+.podium-name { font-weight: 900; font-size: 1.2rem; margin-top: .4rem; }
+.podium-votes { color: var(--muted); font-weight: 700; }
+
+
+.most-choices button.is-voted {
+  background: linear-gradient(180deg, #78ff9a, #00e676);
+  box-shadow: 0 8px 0 #0e9e4c, 0 12px 24px rgba(0,0,0,.3);
+  color: #06210f;
+}
+
+
+.player-header-card { display:grid; gap:.7rem; }
+.player-header-top { display:flex; justify-content:space-between; align-items:center; gap:.8rem; }
+.player-header-identity { display:flex; align-items:center; gap:.7rem; }
+.player-header-label { font-size:.8rem; color: var(--muted); font-weight:700; }
+.player-header-name { font-size:1.05rem; font-weight:900; }
+.player-header-score { text-align:right; min-width:88px; }
+.player-current-mode { font-size:.95rem; color: var(--muted); }

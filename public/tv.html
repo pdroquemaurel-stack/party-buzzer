@@ -16,6 +16,7 @@
           <label class="mode-pill"><input type="radio" name="mode" value="quiz" /> Quiz V/F</label>
           <label class="mode-pill"><input type="radio" name="mode" value="guess" /> Devine</label>
           <label class="mode-pill"><input type="radio" name="mode" value="free" /> Réponse libre</label>
+          <label class="mode-pill"><input type="radio" name="mode" value="most" /> Qui est le plus</label>
         </div>
       </div>
     </header>
@@ -202,6 +203,32 @@
         </div>
         <div id="freeInfo" class="row hint"></div>
       </section>
+
+      <section id="mostPanel" class="card" style="display:none;" data-game-panel="most">
+        <h2>Qui est le plus...</h2>
+
+        <div class="card soft">
+          <h3 style="margin-top:0;">Banque de questions</h3>
+          <div class="row btn-row">
+            <button id="mostLoadBtn">Charger banque</button>
+            <span id="mostLoadedInfo" class="hint"></span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Question</label>
+          <input id="mostQuestion" type="text" placeholder="Ex: Qui est le plus susceptible d'arriver en retard ?" />
+        </div>
+        <div class="field" style="max-width:220px;">
+          <label>Durée (secondes)</label>
+          <input id="mostSeconds" type="number" min="5" max="30" value="15" />
+        </div>
+        <div class="row btn-row">
+          <button id="mostStartBtn" class="btn-green">Lancer vote (15s)</button>
+          <button id="mostRandomAskBtn" class="btn-cyan">Question aléatoire</button>
+        </div>
+        <div id="mostInfo" class="row hint"></div>
+      </section>
     </section>
 
     <!-- Droite: Scores -->
@@ -277,11 +304,22 @@
     </div>
   </div>
 
+  <div id="mostPodiumOverlay" class="overlay">
+    <div style="max-width: 980px; width: 92vw;">
+      <div class="label">Résultat — Qui est le plus</div>
+      <div id="mostResultQuestion" class="question" style="font-size:2rem; margin-bottom:1rem;"></div>
+      <div id="mostPodium" class="most-podium"></div>
+      <div id="mostVotesMeta" class="hint" style="margin-top:1rem;"></div>
+      <div style="margin-top:1rem;"><button id="mostResultCloseBtn">Fermer</button></div>
+    </div>
+  </div>
+
   <script src="/socket.io/socket.io.js"></script>
   <script type="module" src="/js/tv-core.js"></script>
   <script type="module" src="/js/tv-buzzer.js"></script>
   <script type="module" src="/js/tv-quiz.js"></script>
   <script type="module" src="/js/tv-guess.js"></script>
   <script type="module" src="/js/tv-free.js"></script>
+  <script type="module" src="/js/tv-most.js"></script>
 </body>
 </html>
