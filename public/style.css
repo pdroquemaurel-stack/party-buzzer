@@ -551,3 +551,34 @@ input[type="range"]::-moz-range-thumb {
 #freeReviewOverlay .free-answer-card.validated {
   background: rgba(0,90,45,.5);
 }
+
+/* Most (qui est le plus) */
+.most-choices {
+  display: grid;
+  gap: .55rem;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.most-podium {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(140px, 1fr));
+  gap: 1rem;
+  align-items: end;
+}
+
+.podium-step {
+  border-radius: 16px;
+  border: 2px solid rgba(255,255,255,.2);
+  background: rgba(255,255,255,.08);
+  padding: .8rem;
+  min-height: 150px;
+  display: grid;
+  align-content: end;
+  text-align: center;
+}
+.podium-step.gold { min-height: 220px; border-color: #ffd400; }
+.podium-step.silver { min-height: 185px; border-color: #d6dee7; }
+.podium-step.bronze { min-height: 165px; border-color: #cd7f32; }
+.podium-medal { font-size: 2rem; }
+.podium-name { font-weight: 900; font-size: 1.2rem; margin-top: .4rem; }
+.podium-votes { color: var(--muted); font-weight: 700; }

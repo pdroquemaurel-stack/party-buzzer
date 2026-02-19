@@ -10,12 +10,14 @@ const buzzerGame = require('./server/games/buzzer');
 const quizGame = require('./server/games/quiz');
 const guessGame = require('./server/games/guess');
 const freeGame = require('./server/games/free');
+const mostGame = require('./server/games/most');
 
 const games = {
   buzzer: buzzerGame,
   quiz: quizGame,
   guess: guessGame,
-  free: freeGame
+  free: freeGame,
+  most: mostGame
 };
 
 const PORT = process.env.PORT || 3000;
@@ -537,6 +539,36 @@ io.on('connection', (socket) => {
     if (r.gameId !== 'free') return;
     games.free.adminSeriesGotoIndex(io, r, roomCode, index);
     touchRoom(r);
+  });
+
+
+  // MOST (Qui est le plus)
+  socket.on('most:start', ({ question, seconds }) => {
+    if (role !== 'tv' || !roomCode) return;
+    let r = getRoom(roomCode);
+    if (r.gameId !== 'most') r = ensureGame(roomCode, 'most');
+    r.locked = true;
+    broadcastRoomState(roomCode);
+    games.most.adminStart(io, r, roomCode, { question, seconds });
+    touchRoom(r);
+  });
+
+  socket.on('most:vote', ({ target }, ack) => {
+    if (!roomCode) { ack && ack({ ok: false }); return; }
+    const r = getRoom(roomCode);
+    if (r.gameId !== 'most') { ack && ack({ ok: false }); return; }
+    games.most.playerVote(io, r, roomCode, (playerName || 'Joueur'), target, ack);
+    touchRoom(r);
+  });
+
+  socket.on('most:close', () => {
+    if (role !== 'tv' || !roomCode) return;
+    const r = getRoom(roomCode);
+    if (r.gameId !== 'most') return;
+    games.most.adminClose(io, r, roomCode);
+    r.locked = false;
+    touchRoom(r);
+    broadcastRoomState(roomCode);
   });
 
   socket.on('player:kick', ({ name }) => {
