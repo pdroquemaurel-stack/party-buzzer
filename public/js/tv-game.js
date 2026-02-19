@@ -326,10 +326,13 @@ async function runGame(step, globalIndex, globalTotal) {
 
   if (def.id === 'free') {
     Core.showProgress(`GAME: ${globalIndex + 1}/${globalTotal} • ${def.label} (série + correction)`);
+    stageShow();
     stageUpdate({ mode: def.label, phase: 'Questions en cours', question: 'Les joueurs répondent à toute la série...' });
     const reviewPayload = await runFreeSeries(step);
     const reviewQuestion = reviewPayload && reviewPayload.question ? reviewPayload.question : 'Correction en cours';
     stageUpdate({ mode: def.label, phase: 'Correction', question: reviewQuestion });
+    // Pendant la correction, on laisse voir l'overlay de réponses.
+    stageHide();
     await sleep(RESULTS_VIEW_MS);
     return;
   }
@@ -341,6 +344,7 @@ async function runGame(step, globalIndex, globalTotal) {
     if (state.stopRequested) return;
     const current = questions[i];
     const q = String(current && current.q || '').trim();
+    stageShow();
     stageUpdate({ mode: def.label, phase: 'Question', question: q || 'Question en cours...' });
     Core.showProgress(`GAME: ${globalIndex + i + 1}/${globalTotal} • ${def.label}`);
     let askedQuestion = q;
@@ -348,6 +352,8 @@ async function runGame(step, globalIndex, globalTotal) {
     else if (def.id === 'guess') askedQuestion = await runGuess(current, step.seconds);
     else if (def.id === 'most') askedQuestion = await runMost(current, step.seconds);
     stageUpdate({ mode: def.label, phase: 'Correction', question: askedQuestion || q || 'Correction en cours' });
+    // Pendant la correction, on laisse voir les réponses/résultats natifs.
+    stageHide();
     await sleep(RESULTS_VIEW_MS);
   }
 }
