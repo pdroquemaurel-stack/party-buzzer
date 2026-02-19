@@ -7,7 +7,10 @@ function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
 function pickRandomFreeItems(src, amount, secondsOverride) {
   if (!Array.isArray(src) || src.length === 0) return [];
   const arr = src.slice();
-  for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
   const n = clamp(amount || 20, 1, 50);
   const out = [];
   for (let i = 0; i < n; i++) {
@@ -15,6 +18,63 @@ function pickRandomFreeItems(src, amount, secondsOverride) {
     out.push({ q: srcItem.q, s: secondsOverride || srcItem.s || 30, a: srcItem.a || '' });
   }
   return out;
+}
+
+function renderAnswerCard(item, context = 'single') {
+  const card = document.createElement('article');
+  card.className = 'free-answer-card' + (item.validated ? ' validated' : '');
+  card.dataset.player = item.name;
+
+  const head = document.createElement('header');
+  head.className = 'free-answer-head';
+
+  const name = document.createElement('div');
+  name.className = 'free-answer-name';
+  name.textContent = item.name;
+
+  const badge = document.createElement('span');
+  badge.className = 'free-answer-badge' + (item.validated ? ' yes' : ' no');
+  badge.textContent = item.validated ? '✅ Validée (+1 point)' : '⏳ En attente';
+
+  head.appendChild(name);
+  head.appendChild(badge);
+
+  const answerLabel = document.createElement('div');
+  answerLabel.className = 'free-answer-label';
+  answerLabel.textContent = 'Réponse';
+
+  const text = document.createElement('div');
+  text.className = 'free-answer-text';
+  text.textContent = item.text || '—';
+
+  const actions = document.createElement('div');
+  actions.className = 'free-answer-actions';
+  const toggleBtn = document.createElement('button');
+  toggleBtn.type = 'button';
+  toggleBtn.className = item.validated ? 'btn-cyan' : 'btn-green';
+  toggleBtn.textContent = item.validated ? 'Annuler validation' : 'Valider (+1)';
+  toggleBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    Core.socket.emit('free:toggle_validate', { name: item.name, context });
+  });
+  actions.appendChild(toggleBtn);
+
+  card.addEventListener('click', () => {
+    Core.socket.emit('free:toggle_validate', { name: item.name, context });
+  });
+
+  card.appendChild(head);
+  card.appendChild(answerLabel);
+  card.appendChild(text);
+  card.appendChild(actions);
+  return card;
+}
+
+function renderAnswersList(listEl, items, context) {
+  listEl.innerHTML = '';
+  (items || []).forEach((item) => {
+    listEl.appendChild(renderAnswerCard(item, context));
+  });
 }
 
 GameRegistry.register('free', {
@@ -39,7 +99,8 @@ GameRegistry.register('free', {
           loadedInfo.textContent = `${bank.length} question(s) chargée(s).`;
         } catch {
           alert('Impossible de charger /free-questions.json');
-          bank = []; loadedInfo.textContent = '';
+          bank = [];
+          loadedInfo.textContent = '';
         }
       });
 
@@ -47,26 +108,23 @@ GameRegistry.register('free', {
         const q = qInput.value.trim();
         const seconds = Math.max(5, Math.min(180, parseInt(sInput.value || '30', 10)));
         if (!q) { alert('Entre une question'); return; }
-        // Pas de "bonne réponse" saisie manuelle pour single; si besoin on peut ajouter un champ plus tard
         Core.socket.emit('free:start', { question: q, seconds, answer: '' });
         Core.socket.emit('countdown:start', seconds);
         info.textContent = `Question posée (${seconds}s)`;
         setTimeout(() => Core.socket.emit('free:close'), seconds * 1000);
       });
 
-           randAskBtn.addEventListener('click', () => {
+      randAskBtn.addEventListener('click', () => {
         if (!bank.length) { alert('Charge la banque'); return; }
         const item = bank[Math.floor(Math.random() * bank.length)];
         const q = item.q || '';
         if (!q) return;
         const seconds = Math.max(5, Math.min(180, parseInt(sInput.value || (item.s || '30'), 10)));
-        const a = item.a || '';
-        Core.socket.emit('free:start', { question: q, seconds, answer: a });
+        Core.socket.emit('free:start', { question: q, seconds, answer: item.a || '' });
         Core.socket.emit('countdown:start', seconds);
         info.textContent = `Question posée (${seconds}s)`;
         setTimeout(() => Core.socket.emit('free:close'), seconds * 1000);
       });
-
 
       seriesBtn.addEventListener('click', () => {
         if (!bank.length) { alert('Charge la banque'); return; }
@@ -77,7 +135,6 @@ GameRegistry.register('free', {
         info.textContent = `Série lancée (${items.length} question(s))`;
       });
 
-      // Free overlays actions
       document.getElementById('freeResultsCloseBtn')?.addEventListener('click', () => {
         Core.els.freeResultsOverlay.classList.remove('show');
       });
@@ -98,9 +155,10 @@ GameRegistry.register('free', {
   },
 
   onQuestion(payload) {
-        if (payload.phase === 'review') {
+    if (payload.phase === 'review') {
       Core.els.freeReviewPosition.textContent = `${payload.index + 1}/${payload.total}`;
       Core.els.freeReviewQuestion.textContent = payload.question;
+      Core.els.freeReviewQuestion.classList.add('free-review-big-question');
 
       let expectedEl = document.getElementById('freeReviewExpected');
       if (!expectedEl) {
@@ -110,23 +168,13 @@ GameRegistry.register('free', {
         expectedEl.style.marginTop = '.35rem';
         Core.els.freeReviewQuestion.insertAdjacentElement('afterend', expectedEl);
       }
-      expectedEl.textContent = payload.expected ? `Bonne réponse: ${payload.expected}` : 'Bonne réponse: —';
+      const secInfo = payload.seconds ? ` • Durée question: ${payload.seconds}s` : '';
+      expectedEl.textContent = (payload.expected ? `Bonne réponse: ${payload.expected}` : 'Bonne réponse: —') + secInfo;
 
-      const list = Core.els.freeReviewList;
-      list.innerHTML = '';
-      (payload.items || []).forEach(item => {
-        const row = document.createElement('div');
-        row.className = 'free-item' + (item.validated ? ' validated' : '');
-        const who = document.createElement('div'); who.className = 'free-who'; who.textContent = item.name;
-        const text = document.createElement('div'); text.className = 'free-text'; text.textContent = item.text || '';
-        row.appendChild(who); row.appendChild(text);
-        row.addEventListener('click', () => { Core.socket.emit('free:toggle_validate', { name: item.name }); });
-        list.appendChild(row);
-      });
+      renderAnswersList(Core.els.freeReviewList, payload.items, 'review');
       Core.els.freeReviewOverlay.classList.add('show');
       return;
     }
-
 
     const freeInfo = document.getElementById('freeInfo');
     if (typeof payload.index === 'number' && typeof payload.total === 'number') {
@@ -142,42 +190,42 @@ GameRegistry.register('free', {
 
   onProgress({ name, validated, context }) {
     const list = context === 'review' ? Core.els.freeReviewList : Core.els.freeResultsList;
-    const rows = list.querySelectorAll('.free-item');
-    rows.forEach(r => {
-      const who = r.querySelector('.free-who');
-      if (who && who.textContent === name) r.classList.toggle('validated', !!validated);
-    });
+    const cards = Array.from(list.querySelectorAll('.free-answer-card'));
+    const card = cards.find((el) => el.dataset.player === name);
+    if (!card) return;
+    card.classList.toggle('validated', !!validated);
+    const badge = card.querySelector('.free-answer-badge');
+    if (badge) {
+      badge.className = 'free-answer-badge ' + (validated ? 'yes' : 'no');
+      badge.textContent = validated ? '✅ Validée (+1 point)' : '⏳ En attente';
+    }
+    const btn = card.querySelector('button');
+    if (btn) {
+      btn.className = validated ? 'btn-cyan' : 'btn-green';
+      btn.textContent = validated ? 'Annuler validation' : 'Valider (+1)';
+    }
   },
 
-   onResult({ question, expected, items }) {
+  onResult({ question, expected, items }) {
     const list = Core.els.freeResultsList;
     list.innerHTML = '';
 
     const title = document.createElement('div');
-    title.className = 'hint';
-    title.style.marginBottom = '.35rem';
-    title.textContent = `Question: ${question}`;
+    title.className = 'question free-review-big-question';
+    title.style.marginBottom = '.55rem';
+    title.textContent = question;
+
     const exp = document.createElement('div');
-    exp.className = 'hint';
+    exp.className = 'hint free-expected';
     exp.style.marginBottom = '.6rem';
     exp.textContent = expected ? `Bonne réponse: ${expected}` : 'Bonne réponse: —';
 
     list.appendChild(title);
     list.appendChild(exp);
-
-    (items || []).forEach(item => {
-      const row = document.createElement('div');
-      row.className = 'free-item' + (item.validated ? ' validated' : '');
-      const who = document.createElement('div'); who.className = 'free-who'; who.textContent = item.name;
-      const text = document.createElement('div'); text.className = 'free-text'; text.textContent = item.text || '';
-      row.appendChild(who); row.appendChild(text);
-      row.addEventListener('click', () => { Core.socket.emit('free:toggle_validate', { name: item.name }); });
-      list.appendChild(row);
-    });
+    renderAnswersList(list, items, 'single');
 
     Core.els.freeResultsOverlay.classList.add('show');
   },
-
 
   onClose() {}
 });
