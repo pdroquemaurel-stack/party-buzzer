@@ -182,14 +182,17 @@
         <div class="row btn-row" style="flex-wrap:wrap;">
           <div class="field" style="min-width:170px; max-width:240px;">
             <label>Durée de réponse (secondes)</label>
-            <input id="freeSeconds" type="number" min="5" max="180" value="30" />
-            <div class="duration-presets" data-target="freeSeconds">
-              <button type="button" data-seconds="20">20s</button><button type="button" data-seconds="30">30s</button><button type="button" data-seconds="45">45s</button>
+            <input id="freeSeconds" type="hidden" value="10" />
+            <div class="duration-presets choice-only" data-target="freeSeconds" data-choice-group="free-seconds">
+              <button type="button" class="is-selected" data-seconds="10">10s</button><button type="button" data-seconds="15">15s</button><button type="button" data-seconds="20">20s</button>
             </div>
           </div>
           <div class="field" style="min-width:160px; max-width:220px;">
             <label>Questions dans la série</label>
-            <input id="freeSeriesCount" type="number" min="1" max="50" value="20" />
+            <input id="freeSeriesCount" type="hidden" value="20" />
+            <div class="duration-presets choice-only" data-target="freeSeriesCount" data-choice-group="free-count">
+              <button type="button" data-count="2">2 questions</button><button type="button" class="is-selected" data-count="20">20 questions</button><button type="button" data-count="30">30 questions</button>
+            </div>
           </div>
         </div>
         <div class="row btn-row">
