@@ -7,13 +7,28 @@
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
-  <main class="container">
-    <h1>Party Buzzer 3.0</h1>
-    <p>Version 3.0 : plus claire, plus lisible et optimisée pour l'animation en live.</p>
-    <nav class="links">
-      <a href="/tv">Ouvrir l'écran TV/Admin</a>
-      <a href="/join">Rejoindre (vue téléphone)</a>
-    </nav>
+  <main class="container home-page">
+    <header class="home-hero card">
+      <h1>Party Buzzer 3.0</h1>
+      <p>Jeu d'animation multi‑joueurs : l'admin pilote la partie sur TV, les joueurs répondent depuis leur téléphone.</p>
+    </header>
+
+    <section class="home-grid" aria-label="Parcours principal">
+      <article class="card home-choice admin">
+        <div class="home-icon" aria-hidden="true">🎥</div>
+        <h2>Créer / Gérer une salle</h2>
+        <p>Mode Admin : crée la salle, affiche le QR code, lance les manches et gère les scores en direct.</p>
+        <a href="/tv">Ouvrir l'écran TV / Admin</a>
+      </article>
+
+      <article class="card home-choice player">
+        <div class="home-icon" aria-hidden="true">📱</div>
+        <h2>Rejoindre une salle</h2>
+        <p>Mode Joueur : entre le code de salle (ou scanne le QR), choisis ton équipe et attends le lancement.</p>
+        <a href="/join">Rejoindre depuis mon téléphone</a>
+      </article>
+    </section>
+
     <p class="hint">Astuce: depuis un téléphone, utilisez l'IP locale du PC (ex: http://192.168.x.x:3000).</p>
   </main>
 </body>

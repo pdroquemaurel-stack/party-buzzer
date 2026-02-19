@@ -193,7 +193,7 @@ function touchRoom(room) {
 function getRoom(code) {
   let r = rooms.get(code);
   if (!r) {
-    r = { players: new Map(), scores: new Map(), gameId: 'buzzer', game: {}, locked: false, updatedAt: nowMs() };
+    r = { players: new Map(), scores: new Map(), profiles: new Map(), gameId: 'buzzer', game: {}, locked: false, updatedAt: nowMs() };
     games['buzzer'].init(r);
     rooms.set(code, r);
   }
@@ -212,6 +212,11 @@ function cleanName(name) {
   return n || 'Joueur';
 }
 
+function cleanColor(raw) {
+  const c = String(raw || '').trim();
+  return /^#[0-9A-Fa-f]{6}$/.test(c) ? c : '#ff5f7e';
+}
+
 function uniqueName(code, desired) {
   const r = getRoom(code);
   let base = desired;
@@ -226,9 +231,13 @@ function broadcastPlayers(code) {
   const r = rooms.get(code);
   if (!r) return;
   const listMap = new Map();
-  r.scores.forEach((score, name) => listMap.set(name, { name, score, connected: false }));
+  r.scores.forEach((score, name) => {
+    const profile = r.profiles && r.profiles.get(name);
+    listMap.set(name, { name, score, connected: false, color: profile && profile.color ? profile.color : null });
+  });
   r.players.forEach(p => {
-    const item = listMap.get(p.name) || { name: p.name, score: 0, connected: false };
+    const profile = r.profiles && r.profiles.get(p.name);
+    const item = listMap.get(p.name) || { name: p.name, score: 0, connected: false, color: profile && profile.color ? profile.color : null };
     item.connected = true;
     listMap.set(p.name, item);
   });
@@ -291,13 +300,15 @@ io.on('connection', (socket) => {
     if (!canJoinRoom(ipKey)) { ack && ack({ ok: false, error: 'rate_limited' }); return; }
     const code = parseRoomCode(payload && payload.room);
     const desired = cleanName(payload && payload.name);
+    const color = cleanColor(payload && payload.color);
     if (!code || !desired) { ack && ack({ ok: false, error: 'missing' }); return; }
     const r = getRoom(code);
     if (r.locked) { ack && ack({ ok: false, error: 'locked' }); return; }
     const finalName = uniqueName(code, desired);
     playerName = finalName;
     roomCode = code;
-    r.players.set(socket.id, { name: finalName });
+    r.players.set(socket.id, { name: finalName, color });
+    r.profiles.set(finalName, { color });
     if (!r.scores.has(finalName)) r.scores.set(finalName, 0);
     touchRoom(r);
     socket.join(code);
@@ -546,6 +557,7 @@ io.on('connection', (socket) => {
     }
     r.players.delete(targetSocket);
     r.scores.delete(target);
+    if (r.profiles) r.profiles.delete(target);
     touchRoom(r);
     broadcastPlayers(roomCode);
   });

@@ -19,6 +19,15 @@
         <label>Pseudo</label>
         <input id="pseudo" type="text" maxlength="16" required />
       </div>
+      <div class="field">
+        <label>Couleur d’équipe</label>
+        <div class="team-picker" id="teamPicker">
+          <label><input type="radio" name="teamColor" value="#ff5f7e" checked /><span style="background:#ff5f7e"></span> Rose</label>
+          <label><input type="radio" name="teamColor" value="#00e5ff" /><span style="background:#00e5ff"></span> Cyan</label>
+          <label><input type="radio" name="teamColor" value="#00e676" /><span style="background:#00e676"></span> Vert</label>
+          <label><input type="radio" name="teamColor" value="#ffd400" /><span style="background:#ffd400"></span> Jaune</label>
+        </div>
+      </div>
       <div class="actions">
         <button id="joinBtn">Valider</button>
       </div>
@@ -32,7 +41,7 @@
 
     <!-- Buzzer -->
     <section id="buzzerPanel" class="card" style="display:none;">
-      <p>Salle: <strong id="joinedRoom"></strong> — Pseudo: <strong id="joinedPseudo"></strong></p>
+      <p>Salle: <strong id="joinedRoom"></strong> — Pseudo: <strong id="joinedPseudo"></strong> <span id="joinedTeamDot" class="team-dot"></span></p>
       <button id="buzzBtn" style="font-size:1.4rem;padding:1rem 2rem; width:100%;">BUZZ</button>
       <p id="roundState" class="hint"></p>
       <p><a href="/join">Changer de pseudo/salle</a></p>
@@ -88,6 +97,7 @@
     const elRoom = document.getElementById('room');
     const elPseudo = document.getElementById('pseudo');
     const elJoinBtn = document.getElementById('joinBtn');
+    const elTeamPicker = document.getElementById('teamPicker');
     const elForm = document.getElementById('joinForm');
     const elWaitingPanel = document.getElementById('waitingPanel');
     const elWaitingText = document.getElementById('waitingText');
@@ -97,6 +107,7 @@
     const elBuzzerPanel = document.getElementById('buzzerPanel');
     const elJoinedRoom = document.getElementById('joinedRoom');
     const elJoinedPseudo = document.getElementById('joinedPseudo');
+    const elJoinedTeamDot = document.getElementById('joinedTeamDot');
     const elBuzz = document.getElementById('buzzBtn');
     const elRoundState = document.getElementById('roundState');
 
@@ -195,10 +206,11 @@
     elJoinBtn.addEventListener('click', () => {
       const room = elRoom.value.trim().toUpperCase();
       const pseudo = elPseudo.value.trim();
+      const teamColor = (elTeamPicker.querySelector('input[name="teamColor"]:checked') || {}).value || '#ff5f7e';
       if (!room || !pseudo) { alert('Merci de remplir la salle et le pseudo'); return; }
 
       socket = io();
-      socket.emit('player:join', { room, name: pseudo }, (res) => {
+      socket.emit('player:join', { room, name: pseudo, color: teamColor }, (res) => {
         if (!res || !res.ok) {
           const reason = res && res.error === 'locked' ? 'Partie en cours, réessayez bientôt.' : 'Impossible de rejoindre';
           alert(reason);
@@ -207,6 +219,7 @@
 
         elJoinedRoom.textContent = room;
         elJoinedPseudo.textContent = res.name;
+        elJoinedTeamDot.style.background = teamColor;
         elForm.style.display = 'none';
         elWaitingPanel.style.display = '';
         elWaitingText.textContent = "Connecté. En attente du lancement de la partie par l'admin…";

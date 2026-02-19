@@ -27,6 +27,7 @@ export const Core = (() => {
     players: document.getElementById('players'),
     resetScoresBtn: document.getElementById('resetScoresBtn'),
     status: document.getElementById('status'),
+    roomLockToggle: document.getElementById('roomLockToggle'),
     overlay: document.getElementById('overlay'),
     winnerName: document.getElementById('winnerName'),
     countdown: document.getElementById('countdown'),
@@ -170,7 +171,7 @@ export const Core = (() => {
       name.className = 'score-name';
       const avatar = document.createElement('div');
       avatar.className = 'avatar';
-      avatar.style.background = colorFromName(p.name);
+      avatar.style.background = p.color || colorFromName(p.name);
       avatar.textContent = initials(p.name);
       const online = document.createElement('span');
       online.className = 'online-dot' + (p.connected ? ' online' : '');
@@ -349,8 +350,9 @@ export const Core = (() => {
   });
   socket.on(EVENTS.ROOM_PLAYERS, renderPlayers);
   socket.on('room:state', ({ locked }) => {
-    const lockText = locked ? ' — salle verrouillée (partie en cours)' : '';
-    setStatus(`Salle ${room}${lockText ? lockText : ''}`);
+    const lockText = locked ? ' — salle fermée aux nouvelles connexions' : ' — salle ouverte';
+    setStatus(`Salle ${room}${lockText}`);
+    if (els.roomLockToggle) els.roomLockToggle.checked = !!locked;
   });
   socket.on(EVENTS.SCORES_RESET, () => setStatus('Scores réinitialisés'));
   socket.on(EVENTS.ROUND_RESET, () => { hideQuestionOverlay(); hideResultsOverlay(); hideProgress(); setStatus('Tour/Question réinitialisé.'); });
@@ -446,6 +448,9 @@ export const Core = (() => {
     });
 
     els.resetScoresBtn?.addEventListener('click', () => socket.emit('scores:reset'));
+    els.roomLockToggle?.addEventListener('change', () => {
+      socket.emit('room:lock', !!els.roomLockToggle.checked);
+    });
     els.resultsCloseBtn?.addEventListener('click', hideResultsOverlay);
 
     document.querySelectorAll('.duration-presets').forEach((group) => {
