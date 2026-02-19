@@ -480,6 +480,16 @@ io.on('connection', (socket) => {
     broadcastRoomState(roomCode);
   });
 
+  socket.on('free:toggle_validate', ({ name }) => {
+    if (role !== 'tv' || !roomCode) return;
+    const r = getRoom(roomCode);
+    if (r.gameId !== 'free') return;
+    const player = String(name || '').trim();
+    if (!player) return;
+    games.free.adminToggleValidate(io, r, roomCode, player, broadcastPlayers);
+    touchRoom(r);
+  });
+
   // FREE - Series
 	socket.on('free:series:start', ({ items }) => {
     if (role !== 'tv' || !roomCode) return;
