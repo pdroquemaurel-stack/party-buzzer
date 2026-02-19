@@ -124,7 +124,8 @@ export const Core = (() => {
     els.roomCode.textContent = room;
     const joinUrl = buildJoinUrl();
     els.qrLink.href = joinUrl;
-    els.qrLink.textContent = '';
+    els.qrLink.classList.remove('hint');
+    if (!els.qrLink.contains(els.qr)) els.qrLink.appendChild(els.qr);
     const qrApi = '/qr?data=';
     const fallbackSvg = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="220" height="220"><rect width="220" height="220" fill="#fff"/><text x="50%" y="45%" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="20" fill="#000">ROOM</text><text x="50%" y="58%" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="30" font-weight="bold" fill="#000">${room}</text></svg>`);
     els.qr.onerror = () => {
@@ -138,7 +139,9 @@ export const Core = (() => {
     };
     els.qr.onload = () => {
       els.qr.style.display = 'block';
-      if (els.qrLink.textContent) els.qrLink.textContent = '';
+      if (!els.qrLink.contains(els.qr)) els.qrLink.appendChild(els.qr);
+      const fallbackText = els.qrLink.querySelector('.qr-fallback-link');
+      if (fallbackText) fallbackText.remove();
     };
     els.qr.src = qrApi + encodeURIComponent(joinUrl);
   }
