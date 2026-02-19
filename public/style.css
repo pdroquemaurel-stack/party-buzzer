@@ -422,6 +422,7 @@ input[type="range"]::-moz-range-thumb {
 .waiting-badge { display:inline-block; padding:.25rem .6rem; border-radius:999px; background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.2); margin-bottom:.5rem; }
 .duration-presets { display:flex; gap:.35rem; flex-wrap:wrap; margin-top:.35rem; }
 .duration-presets button { padding:.35rem .55rem; border-radius:10px; box-shadow:none; font-size:.82rem; }
+.duration-presets button.is-selected { outline: 2px solid var(--cyan); background: rgba(0,229,255,.18); color: #fff; }
 .timer-ring { margin-top:.8rem; width:120px; aspect-ratio:1; border-radius:50%; display:grid; place-items:center; background:conic-gradient(var(--green) calc(var(--timer-pct, 1) * 1turn), rgba(255,255,255,.12) 0); position:relative; }
 .timer-ring::before { content:""; position:absolute; inset:10px; border-radius:50%; background:rgba(12,16,35,.95); }
 .timer-ring .timer-value, .timer-ring .timer-label { position:relative; z-index:1; text-align:center; }
@@ -450,7 +451,7 @@ input[type="range"]::-moz-range-thumb {
 .free-answer-card {
   border-radius: 12px;
   border: 2px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.08);
+  background: rgba(0,0,0,.45);
   padding: .7rem;
   display: grid;
   gap: .55rem;
@@ -480,7 +481,7 @@ input[type="range"]::-moz-range-thumb {
   min-height: 52px;
   white-space: pre-wrap;
   word-break: break-word;
-  color: #eef5ff;
+  color: #ffffff;
 }
 .free-answer-actions { display:flex; justify-content:flex-end; }
 .free-answer-actions button { box-shadow: none; padding: .45rem .65rem; }
@@ -528,7 +529,7 @@ input[type="range"]::-moz-range-thumb {
 .free-answer-text {
   font-size: 1.08rem;
   font-weight: 700;
-  background: rgba(0,0,0,.22);
+  background: rgba(0,0,0,.55);
   border-radius: 10px;
   padding: .55rem .6rem;
 }

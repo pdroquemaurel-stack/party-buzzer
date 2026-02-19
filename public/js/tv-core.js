@@ -409,9 +409,9 @@ export const Core = (() => {
     if (typeof index === 'number' && typeof total === 'number') showProgress(`Série: ${index + 1}/${total}`);
     emitGameEvent(GAME_EVENTS.QUESTION, { question, seconds, index, total });
   });
-  socket.on(EVENTS.FREE_RESULTS, ({ question, items }) => {
+  socket.on(EVENTS.FREE_RESULTS, ({ question, expected, items }) => {
     hideQuestionOverlay();
-    emitGameEvent(GAME_EVENTS.RESULT, { question, items });
+    emitGameEvent(GAME_EVENTS.RESULT, { question, expected, items });
     hideProgress();
   });
   socket.on(EVENTS.FREE_VALIDATED, ({ name, validated }) => {
@@ -466,9 +466,13 @@ export const Core = (() => {
     document.querySelectorAll('.duration-presets').forEach((group) => {
       const target = group.getAttribute('data-target');
       const input = document.getElementById(target || '');
-      group.querySelectorAll('button[data-seconds]').forEach((btn) => {
+      const buttons = group.querySelectorAll('button[data-seconds], button[data-count]');
+      buttons.forEach((btn) => {
         btn.addEventListener('click', () => {
-          if (input) input.value = btn.getAttribute('data-seconds') || input.value;
+          const value = btn.getAttribute('data-seconds') || btn.getAttribute('data-count');
+          if (input && value) input.value = value;
+          buttons.forEach((b) => b.classList.remove('is-selected'));
+          btn.classList.add('is-selected');
         });
       });
     });

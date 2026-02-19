@@ -4,6 +4,12 @@ import { GameRegistry, Core } from './tv-core.js';
 let bank = [];
 
 function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
+
+function normalizeFreeSeconds(v) {
+  const n = parseInt(v, 10);
+  if (n === 10 || n === 15 || n === 20) return n;
+  return 10;
+}
 function pickRandomFreeItems(src, amount, secondsOverride) {
   if (!Array.isArray(src) || src.length === 0) return [];
   const arr = src.slice();
@@ -106,7 +112,7 @@ GameRegistry.register('free', {
 
       startBtn.addEventListener('click', () => {
         const q = qInput.value.trim();
-        const seconds = Math.max(5, Math.min(180, parseInt(sInput.value || '30', 10)));
+        const seconds = normalizeFreeSeconds(sInput.value || '10');
         if (!q) { alert('Entre une question'); return; }
         Core.socket.emit('free:start', { question: q, seconds, answer: '' });
         Core.socket.emit('countdown:start', seconds);
@@ -119,7 +125,7 @@ GameRegistry.register('free', {
         const item = bank[Math.floor(Math.random() * bank.length)];
         const q = item.q || '';
         if (!q) return;
-        const seconds = Math.max(5, Math.min(180, parseInt(sInput.value || (item.s || '30'), 10)));
+        const seconds = normalizeFreeSeconds(sInput.value || '10');
         Core.socket.emit('free:start', { question: q, seconds, answer: item.a || '' });
         Core.socket.emit('countdown:start', seconds);
         info.textContent = `Question posée (${seconds}s)`;
@@ -129,7 +135,7 @@ GameRegistry.register('free', {
       seriesBtn.addEventListener('click', () => {
         if (!bank.length) { alert('Charge la banque'); return; }
         const count = Math.max(1, Math.min(50, parseInt(countInput.value || '20', 10)));
-        const seconds = Math.max(5, Math.min(180, parseInt(sInput.value || '30', 10)));
+        const seconds = normalizeFreeSeconds(sInput.value || '10');
         const items = pickRandomFreeItems(bank, count, seconds);
         Core.socket.emit('free:series:start', { items });
         info.textContent = `Série lancée (${items.length} question(s))`;
