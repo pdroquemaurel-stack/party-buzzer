@@ -39,6 +39,10 @@ function renderAnswerCard(item, context = 'single') {
   head.appendChild(name);
   head.appendChild(badge);
 
+  const answerLabel = document.createElement('div');
+  answerLabel.className = 'free-answer-label';
+  answerLabel.textContent = 'Réponse';
+
   const text = document.createElement('div');
   text.className = 'free-answer-text';
   text.textContent = item.text || '—';
@@ -60,6 +64,7 @@ function renderAnswerCard(item, context = 'single') {
   });
 
   card.appendChild(head);
+  card.appendChild(answerLabel);
   card.appendChild(text);
   card.appendChild(actions);
   return card;
@@ -153,6 +158,7 @@ GameRegistry.register('free', {
     if (payload.phase === 'review') {
       Core.els.freeReviewPosition.textContent = `${payload.index + 1}/${payload.total}`;
       Core.els.freeReviewQuestion.textContent = payload.question;
+      Core.els.freeReviewQuestion.classList.add('free-review-big-question');
 
       let expectedEl = document.getElementById('freeReviewExpected');
       if (!expectedEl) {
@@ -162,7 +168,8 @@ GameRegistry.register('free', {
         expectedEl.style.marginTop = '.35rem';
         Core.els.freeReviewQuestion.insertAdjacentElement('afterend', expectedEl);
       }
-      expectedEl.textContent = payload.expected ? `Bonne réponse: ${payload.expected}` : 'Bonne réponse: —';
+      const secInfo = payload.seconds ? ` • Durée question: ${payload.seconds}s` : '';
+      expectedEl.textContent = (payload.expected ? `Bonne réponse: ${payload.expected}` : 'Bonne réponse: —') + secInfo;
 
       renderAnswersList(Core.els.freeReviewList, payload.items, 'review');
       Core.els.freeReviewOverlay.classList.add('show');
@@ -204,12 +211,12 @@ GameRegistry.register('free', {
     list.innerHTML = '';
 
     const title = document.createElement('div');
-    title.className = 'hint';
-    title.style.marginBottom = '.35rem';
-    title.textContent = `Question: ${question}`;
+    title.className = 'question free-review-big-question';
+    title.style.marginBottom = '.55rem';
+    title.textContent = question;
 
     const exp = document.createElement('div');
-    exp.className = 'hint';
+    exp.className = 'hint free-expected';
     exp.style.marginBottom = '.6rem';
     exp.textContent = expected ? `Bonne réponse: ${expected}` : 'Bonne réponse: —';
 

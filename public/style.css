@@ -507,3 +507,28 @@ input[type="range"]::-moz-range-thumb {
   .team-picker { grid-template-columns: 1fr; }
   #joinForm .actions button, #buzzBtn, #freeSendBtn, #btnTrue, #btnFalse { width: 100%; }
 }
+
+
+#quizTimer {
+  font-size: clamp(1.2rem, 2.4vw, 1.8rem);
+  font-weight: 900;
+  color: #ffd400;
+  text-shadow: 0 2px 0 rgba(0,0,0,.4);
+}
+
+.free-review-big-question {
+  font-size: clamp(1.6rem, 4.2vw, 2.4rem) !important;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.free-expected { font-size: 1rem; }
+.free-answer-name { font-size: 1.1rem; letter-spacing: .02em; }
+.free-answer-label { font-size: .78rem; text-transform: uppercase; color: var(--muted); font-weight: 800; }
+.free-answer-text {
+  font-size: 1.08rem;
+  font-weight: 700;
+  background: rgba(0,0,0,.22);
+  border-radius: 10px;
+  padding: .55rem .6rem;
+}

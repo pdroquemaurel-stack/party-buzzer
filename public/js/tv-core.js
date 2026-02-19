@@ -276,13 +276,13 @@ export const Core = (() => {
     els.quizQText.textContent = question;
     const total = Math.max(1, seconds || 5);
     let remain = total;
-    els.quizTimer.textContent = `Temps restant: ${remain}s`;
+    els.quizTimer.textContent = `⏱ Temps restant: ${remain}s`;
     updateTimerRing(remain, total);
     els.freeHint.style.display = showFreeHint ? 'block' : 'none';
     els.quizQOverlay.classList.add('show');
     quizTimer = setInterval(() => {
       remain--;
-      if (remain > 0) { els.quizTimer.textContent = `Temps restant: ${remain}s`; updateTimerRing(remain, total); }
+      if (remain > 0) { els.quizTimer.textContent = `⏱ Temps restant: ${remain}s`; updateTimerRing(remain, total); }
       else { clearInterval(quizTimer); quizTimer = null; hideTimerRing(); }
     }, 1000);
   }
