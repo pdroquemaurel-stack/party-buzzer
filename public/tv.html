@@ -49,6 +49,9 @@
             Fermer la salle (bloquer les nouveaux joueurs)
           </label>
         </div>
+        <div class="row" style="margin-top:.55rem;">
+          <button id="gameBuilderBtn" class="btn-cyan" type="button">Créer une GAME</button>
+        </div>
 
         <div id="timerRing" class="timer-ring" style="display:none;">
           <div class="timer-value">0</div>
@@ -314,6 +317,22 @@
     </div>
   </div>
 
+  <div id="gameBuilderOverlay" class="overlay">
+    <div class="game-builder-card">
+      <div class="row" style="justify-content:space-between; align-items:center;">
+        <div class="label">Créer une GAME</div>
+        <button id="gameBuilderCloseBtn" type="button">Fermer</button>
+      </div>
+      <p class="hint" style="margin-top:.2rem;">Choisis les jeux, le nombre de questions et la durée de chaque question.</p>
+
+      <div id="gameBuilderRows" class="game-builder-rows"></div>
+
+      <div class="row btn-row" style="justify-content:flex-end; margin-top:.7rem;">
+        <button id="gameBuilderStartBtn" class="btn-green" type="button">Lancer la GAME</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/socket.io/socket.io.js"></script>
   <script type="module" src="/js/tv-core.js"></script>
   <script type="module" src="/js/tv-buzzer.js"></script>
@@ -321,5 +340,6 @@
   <script type="module" src="/js/tv-guess.js"></script>
   <script type="module" src="/js/tv-free.js"></script>
   <script type="module" src="/js/tv-most.js"></script>
+  <script type="module" src="/js/tv-game.js"></script>
 </body>
 </html>
