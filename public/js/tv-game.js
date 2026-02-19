@@ -15,7 +15,34 @@ const state = {
   configByGameId: new Map()
 };
 
+const RESULTS_VIEW_MS = 10000;
+const REVIEW_WAIT_TIMEOUT_MS = 120000;
+
 function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
+
+function waitForSocketEvent(eventName, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    let done = false;
+    let timer = null;
+
+    const onEvent = (payload) => {
+      if (done) return;
+      done = true;
+      if (timer) clearTimeout(timer);
+      Core.socket.off(eventName, onEvent);
+      resolve(payload);
+    };
+
+    timer = setTimeout(() => {
+      if (done) return;
+      done = true;
+      Core.socket.off(eventName, onEvent);
+      reject(new Error('timeout:' + eventName));
+    }, timeoutMs);
+
+    Core.socket.on(eventName, onEvent);
+  });
+}
 
 function clamp(value, min, max, fallback) {
   const n = parseInt(value, 10);
@@ -226,13 +253,32 @@ async function runGuess(item, seconds) {
   Core.socket.emit('guess:close');
 }
 
-async function runFree(item, seconds) {
+async function runFreeSingle(item, seconds) {
   const q = String(item.q || '').trim();
   if (!q) return;
   Core.socket.emit('free:start', { question: q, seconds, answer: String(item.a || '') });
   Core.socket.emit('countdown:start', seconds);
   await sleep(seconds * 1000);
   Core.socket.emit('free:close');
+}
+
+async function runFreeSeries(step) {
+  const def = getGameDef('free');
+  if (!def) return;
+  const bank = await loadBank(def.bankUrl);
+  if (!bank.length) return;
+
+  const questions = sample(bank, Math.min(step.count, bank.length)).map((item) => ({
+    q: String(item.q || '').trim(),
+    s: step.seconds,
+    a: String(item.a || '')
+  })).filter((item) => item.q);
+
+  if (!questions.length) return;
+
+  const reviewOpened = waitForSocketEvent('free:review_open', REVIEW_WAIT_TIMEOUT_MS).catch(() => null);
+  Core.socket.emit('free:series:start', { items: questions });
+  await reviewOpened;
 }
 
 async function runMost(item, seconds) {
@@ -247,6 +293,14 @@ async function runMost(item, seconds) {
 async function runGame(step, globalIndex, globalTotal) {
   const def = getGameDef(step.id);
   if (!def) return;
+
+  if (def.id === 'free') {
+    Core.showProgress(`GAME: ${globalIndex + 1}/${globalTotal} • ${def.label} (série + correction)`);
+    await runFreeSeries(step);
+    await sleep(RESULTS_VIEW_MS);
+    return;
+  }
+
   const bank = await loadBank(def.bankUrl);
   if (!bank.length) return;
   const questions = sample(bank, Math.min(step.count, bank.length));
@@ -255,9 +309,9 @@ async function runGame(step, globalIndex, globalTotal) {
     Core.showProgress(`GAME: ${globalIndex + i + 1}/${globalTotal} • ${def.label}`);
     if (def.id === 'quiz') await runQuiz(questions[i], step.seconds);
     else if (def.id === 'guess') await runGuess(questions[i], step.seconds);
-    else if (def.id === 'free') await runFree(questions[i], step.seconds);
+    else if (def.id === 'free') await runFreeSingle(questions[i], step.seconds);
     else if (def.id === 'most') await runMost(questions[i], step.seconds);
-    await sleep(1000);
+    await sleep(RESULTS_VIEW_MS);
   }
 }
 
