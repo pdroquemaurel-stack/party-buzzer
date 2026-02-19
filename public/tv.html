@@ -355,6 +355,17 @@
     <div id="gameShowQuestion" class="game-show-question">La question apparaîtra ici</div>
   </div>
 
+
+  <div id="gameFlowTimer" class="game-flow-timer" aria-hidden="true" style="display:none;">
+    <div class="game-flow-timer-head">
+      <span id="gameFlowTimerPhase">Question</span>
+      <span id="gameFlowTimerValue">10s</span>
+    </div>
+    <div class="game-flow-timer-track">
+      <div id="gameFlowTimerFill" class="game-flow-timer-fill"></div>
+    </div>
+  </div>
+
   <script src="/socket.io/socket.io.js"></script>
   <script type="module" src="/js/tv-core.js"></script>
   <script type="module" src="/js/tv-buzzer.js"></script>

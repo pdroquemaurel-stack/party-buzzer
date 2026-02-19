@@ -17,6 +17,7 @@ const state = {
 
 const RESULTS_VIEW_MS = 10000;
 const REVIEW_WAIT_TIMEOUT_MS = 120000;
+let flowTimerInterval = null;
 
 function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
@@ -69,6 +70,56 @@ function stageUpdate({ mode, phase, question }) {
   if (els.mode && mode) els.mode.textContent = mode;
   if (els.phase && phase) els.phase.textContent = phase;
   if (els.question) els.question.textContent = question || '...';
+}
+
+
+function flowTimerEls() {
+  return {
+    root: document.getElementById('gameFlowTimer'),
+    phase: document.getElementById('gameFlowTimerPhase'),
+    value: document.getElementById('gameFlowTimerValue'),
+    fill: document.getElementById('gameFlowTimerFill')
+  };
+}
+
+function stopFlowTimer() {
+  if (flowTimerInterval) {
+    clearInterval(flowTimerInterval);
+    flowTimerInterval = null;
+  }
+  const els = flowTimerEls();
+  if (els.root) els.root.style.display = 'none';
+}
+
+function startFlowTimer(totalSeconds, phaseLabel) {
+  stopFlowTimer();
+  const total = Math.max(1, Number(totalSeconds) || 1);
+  const els = flowTimerEls();
+  if (!els.root || !els.value || !els.fill || !els.phase) return;
+  els.root.style.display = '';
+  els.phase.textContent = phaseLabel || 'Question';
+  const startAt = Date.now();
+
+  const tick = () => {
+    const elapsed = (Date.now() - startAt) / 1000;
+    const remain = Math.max(0, total - elapsed);
+    const pct = Math.max(0, Math.min(1, remain / total));
+    els.value.textContent = `${Math.ceil(remain)}s`;
+    els.fill.style.width = `${Math.round(pct * 100)}%`;
+  };
+
+  tick();
+  flowTimerInterval = setInterval(() => {
+    tick();
+    if ((Date.now() - startAt) / 1000 >= total) stopFlowTimer();
+  }, 100);
+}
+
+async function sleepWithFlowTimer(ms, phaseLabel) {
+  const sec = Math.max(1, Math.round(ms / 1000));
+  startFlowTimer(sec, phaseLabel);
+  await sleep(ms);
+  stopFlowTimer();
 }
 
 function clamp(value, min, max, fallback) {
@@ -264,7 +315,7 @@ async function runQuiz(item, seconds) {
   if (!q) return '';
   Core.socket.emit('quiz:start', { question: q, correct: !!item.a, seconds });
   Core.socket.emit('countdown:start', seconds);
-  await sleep(seconds * 1000);
+  await sleepWithFlowTimer(seconds * 1000, 'Question');
   Core.socket.emit('quiz:close');
   return q;
 }
@@ -277,7 +328,7 @@ async function runGuess(item, seconds) {
   const correct = Number.isFinite(Number(item.c)) ? Number(item.c) : min;
   Core.socket.emit('guess:start', { question: q, correct, min, max, seconds });
   Core.socket.emit('countdown:start', seconds);
-  await sleep(seconds * 1000);
+  await sleepWithFlowTimer(seconds * 1000, 'Question');
   Core.socket.emit('guess:close');
   return q;
 }
@@ -287,7 +338,7 @@ async function runFreeSingle(item, seconds) {
   if (!q) return;
   Core.socket.emit('free:start', { question: q, seconds, answer: String(item.a || '') });
   Core.socket.emit('countdown:start', seconds);
-  await sleep(seconds * 1000);
+  await sleepWithFlowTimer(seconds * 1000, 'Question');
   Core.socket.emit('free:close');
 }
 
@@ -315,7 +366,7 @@ async function runMost(item, seconds) {
   if (!q) return '';
   Core.socket.emit('most:start', { question: q, seconds });
   Core.socket.emit('countdown:start', seconds);
-  await sleep(seconds * 1000);
+  await sleepWithFlowTimer(seconds * 1000, 'Question');
   Core.socket.emit('most:close');
   return q;
 }
@@ -328,12 +379,14 @@ async function runGame(step, globalIndex, globalTotal) {
     Core.showProgress(`GAME: ${globalIndex + 1}/${globalTotal} • ${def.label} (série + correction)`);
     stageShow();
     stageUpdate({ mode: def.label, phase: 'Questions en cours', question: 'Les joueurs répondent à toute la série...' });
+    startFlowTimer(Math.max(1, step.seconds * step.count), 'Questions');
     const reviewPayload = await runFreeSeries(step);
+    stopFlowTimer();
     const reviewQuestion = reviewPayload && reviewPayload.question ? reviewPayload.question : 'Correction en cours';
     stageUpdate({ mode: def.label, phase: 'Correction', question: reviewQuestion });
     // Pendant la correction, on laisse voir l'overlay de réponses.
     stageHide();
-    await sleep(RESULTS_VIEW_MS);
+    await sleepWithFlowTimer(RESULTS_VIEW_MS, 'Réponses');
     return;
   }
 
@@ -354,7 +407,7 @@ async function runGame(step, globalIndex, globalTotal) {
     stageUpdate({ mode: def.label, phase: 'Correction', question: askedQuestion || q || 'Correction en cours' });
     // Pendant la correction, on laisse voir les réponses/résultats natifs.
     stageHide();
-    await sleep(RESULTS_VIEW_MS);
+    await sleepWithFlowTimer(RESULTS_VIEW_MS, 'Réponses');
   }
 }
 
@@ -388,6 +441,7 @@ async function startGamePlan() {
   } finally {
     Core.hideProgress();
     stageHide();
+    stopFlowTimer();
     state.running = false;
     state.stopRequested = false;
   }
