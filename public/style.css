@@ -24,7 +24,7 @@
 
 /* Reset & base */
 * { box-sizing: border-box; }
-html, body { height: 100%; overflow: hidden; }
+html, body { height: 100%; overflow-x: hidden; }
 body {
   margin: 0;
   font-family: 'Nunito', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
@@ -44,6 +44,9 @@ body::before {
   background-size: 24px 24px;
   opacity: .25;
 }
+
+
+.tv-body { overflow: hidden; }
 
 .container {
   width: 100vw;

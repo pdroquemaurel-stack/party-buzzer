@@ -56,7 +56,9 @@ export const Core = (() => {
     progressBanner: createProgressBanner()
   };
 
-  const FIXED_BASE = 'https://party-buzzer.onrender.com';
+  const APP_BASE_URL = window.__APP_BASE_URL__ || window.location.origin;
+  const roomTokenKey = 'party-buzzer-admin-token';
+  let adminToken = localStorage.getItem(roomTokenKey) || '';
 
   // State
   let cdTimer = null;
@@ -87,13 +89,16 @@ export const Core = (() => {
   }
   function setStatus(text) { els.status.textContent = text || ''; }
 
-  function buildJoinUrl() { return FIXED_BASE + '/join?room=' + encodeURIComponent(room); }
+  function buildJoinUrl() { return APP_BASE_URL + '/join?room=' + encodeURIComponent(room); }
   function renderInvite() {
     els.roomCode.textContent = room;
     const joinUrl = buildJoinUrl();
     els.qrLink.href = joinUrl;
     const qrApi = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=';
     els.qr.src = qrApi + encodeURIComponent(joinUrl);
+    els.qr.onerror = () => {
+      els.qr.alt = `Ouvrir ce lien sur mobile: ${joinUrl}`;
+    };
   }
 
   // Avatars/initiales
@@ -252,6 +257,17 @@ export const Core = (() => {
   }
 
   // Socket handlers communs
+
+  socket.on('room:ready', ({ adminToken: token }) => {
+    if (token) {
+      adminToken = token;
+      localStorage.setItem(roomTokenKey, token);
+    }
+  });
+
+  socket.on('room:error', ({ error }) => {
+    setStatus(error === 'forbidden' ? 'Accès admin refusé pour cette salle.' : 'Erreur salle.');
+  });
   socket.on(EVENTS.MODE_CHANGED, ({ mode }) => {
     hideQuestionOverlay();
     stopCountdownUI();
@@ -326,7 +342,7 @@ export const Core = (() => {
   // UI init
   window.addEventListener('DOMContentLoaded', () => {
     renderInvite();
-    socket.emit('tv:create_room', room);
+    socket.emit('tv:create_room', { code: room, adminToken });
 
     // Mode radios -> serveur
     els.modeSwitch.querySelectorAll('input[name="mode"]').forEach(radio => {
@@ -337,8 +353,10 @@ export const Core = (() => {
 
     els.regenBtn.addEventListener('click', () => {
       room = generateRoomCode(5);
+      adminToken = '';
+      localStorage.removeItem(roomTokenKey);
       renderInvite();
-      socket.emit('tv:create_room', room);
+      socket.emit('tv:create_room', { code: room, adminToken });
     });
 
     els.resetScoresBtn?.addEventListener('click', () => socket.emit('scores:reset'));

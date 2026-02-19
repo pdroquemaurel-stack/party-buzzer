@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: party-buzzer
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: APP_BASE_URL
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: ROOM_TTL_MS
+        value: "21600000"
+      - key: ROOM_CLEANUP_INTERVAL_MS
+        value: "600000"
