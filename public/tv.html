@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <title>Party Buzzer - TV/Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Party Buzzer: interface TV/Admin en direct." />
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body class="tv-body">
@@ -41,7 +42,7 @@
       </section>
 
       <section class="tv-status-box">
-        <div id="status" class="tv-status"></div>
+        <div id="status" class="tv-status" aria-live="polite"></div>
       </section>
     </aside>
 
@@ -194,7 +195,7 @@
   </main>
 
   <!-- Overlays globaux -->
-  <div id="overlay" class="overlay" onclick="this.classList.remove('show')">
+  <div id="overlay" class="overlay" role="dialog" aria-modal="true" onclick="this.classList.remove('show')">
     <div>
       <div class="label">Gagnant</div>
       <div id="winnerName" class="winner"></div>
@@ -202,14 +203,14 @@
     </div>
   </div>
 
-  <div id="countdown" class="overlay">
+  <div id="countdown" class="overlay" role="status" aria-live="assertive">
     <div>
       <div class="label">Début dans</div>
       <div id="countNum" class="winner"></div>
     </div>
   </div>
 
-  <div id="quizQOverlay" class="overlay">
+  <div id="quizQOverlay" class="overlay" role="dialog" aria-modal="true">
     <button id="overlayStopBtn" class="overlay-stop" title="Arrêter l'auto‑play">✖</button>
     <div>
       <div class="label">Question</div>
@@ -244,6 +245,7 @@
     </div>
   </div>
 
+  <script src="/config.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script type="module" src="/js/tv-core.js"></script>
   <script type="module" src="/js/tv-buzzer.js"></script>
