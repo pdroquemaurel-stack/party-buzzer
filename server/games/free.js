@@ -163,6 +163,7 @@ module.exports = {
         total: g.seriesLength,
         question: first.q,
         expected: first.a || '',
+        seconds: first.s,
         items
       });
       return;
@@ -184,6 +185,7 @@ module.exports = {
       total: g.seriesLength,
       question: first.q,
       expected: first.a || '',
+      seconds: first.s,
       items
     });
   },
@@ -201,6 +203,7 @@ module.exports = {
       total: g.seriesLength,
       question: q,
       expected: a,
+      seconds: g.series[idx].s,
       items
     });
   },

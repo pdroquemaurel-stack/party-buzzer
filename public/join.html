@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
-  <title>Party Buzzer - Rejoindre</title>
+  <title>Party Buzzer 3.0 - Rejoindre</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <link rel="stylesheet" href="/style.css" />
 </head>
@@ -19,15 +19,29 @@
         <label>Pseudo</label>
         <input id="pseudo" type="text" maxlength="16" required />
       </div>
+      <div class="field">
+        <label>Couleur d’équipe</label>
+        <div class="team-picker" id="teamPicker">
+          <label><input type="radio" name="teamColor" value="#ff5f7e" checked /><span style="background:#ff5f7e"></span> Rose</label>
+          <label><input type="radio" name="teamColor" value="#00e5ff" /><span style="background:#00e5ff"></span> Cyan</label>
+          <label><input type="radio" name="teamColor" value="#00e676" /><span style="background:#00e676"></span> Vert</label>
+          <label><input type="radio" name="teamColor" value="#ffd400" /><span style="background:#ffd400"></span> Jaune</label>
+        </div>
+      </div>
       <div class="actions">
         <button id="joinBtn">Valider</button>
       </div>
       <small class="hint">Scanne le QR sur l'ecran TV pour pre-remplir la salle.</small>
     </form>
 
+    <section id="waitingPanel" class="card waiting-card" style="display:none;">
+      <div class="waiting-badge">Salle en attente</div>
+      <p id="waitingText" class="hint">En attente du lancement de la partie par l'admin…</p>
+    </section>
+
     <!-- Buzzer -->
     <section id="buzzerPanel" class="card" style="display:none;">
-      <p>Salle: <strong id="joinedRoom"></strong> — Pseudo: <strong id="joinedPseudo"></strong></p>
+      <p>Salle: <strong id="joinedRoom"></strong> — Pseudo: <strong id="joinedPseudo"></strong> <span id="joinedTeamDot" class="team-dot"></span></p>
       <button id="buzzBtn" style="font-size:1.4rem;padding:1rem 2rem; width:100%;">BUZZ</button>
       <p id="roundState" class="hint"></p>
       <p><a href="/join">Changer de pseudo/salle</a></p>
@@ -70,6 +84,8 @@
       </div>
     </section>
 
+    <div id="answerAck" class="answer-ack" style="display:none;"></div>
+
     <p><a href="/">Retour a l'accueil</a></p>
   </main>
 
@@ -81,12 +97,17 @@
     const elRoom = document.getElementById('room');
     const elPseudo = document.getElementById('pseudo');
     const elJoinBtn = document.getElementById('joinBtn');
+    const elTeamPicker = document.getElementById('teamPicker');
     const elForm = document.getElementById('joinForm');
+    const elWaitingPanel = document.getElementById('waitingPanel');
+    const elWaitingText = document.getElementById('waitingText');
+    const elAnswerAck = document.getElementById('answerAck');
 
     // Buzzer
     const elBuzzerPanel = document.getElementById('buzzerPanel');
     const elJoinedRoom = document.getElementById('joinedRoom');
     const elJoinedPseudo = document.getElementById('joinedPseudo');
+    const elJoinedTeamDot = document.getElementById('joinedTeamDot');
     const elBuzz = document.getElementById('buzzBtn');
     const elRoundState = document.getElementById('roundState');
 
@@ -119,6 +140,7 @@
     let currentMode = 'buzzer';
     let cdInt = null;
     let quizAnswered = null;
+    let questionActive = { quiz: false, guess: false, free: false, buzzer: false };
 
     // Guess auto-send
     let myGuess = null;
@@ -137,10 +159,27 @@
     function stopCountdown() { if (cdInt) { clearInterval(cdInt); cdInt = null; } }
     function setModeUI(mode) {
       currentMode = mode;
-      elBuzzerPanel.style.display = (mode === 'buzzer') ? '' : 'none';
-      elQuizPanel.style.display = (mode === 'quiz') ? '' : 'none';
-      elGuessPanel.style.display = (mode === 'guess') ? '' : 'none';
-      elFreePanel.style.display = (mode === 'free') ? '' : 'none';
+      const hasActiveQuestion = questionActive[mode] === true;
+      elWaitingPanel.style.display = hasActiveQuestion ? 'none' : '';
+      elBuzzerPanel.style.display = (mode === 'buzzer' && hasActiveQuestion) ? '' : 'none';
+      elQuizPanel.style.display = (mode === 'quiz' && hasActiveQuestion) ? '' : 'none';
+      elGuessPanel.style.display = (mode === 'guess' && hasActiveQuestion) ? '' : 'none';
+      elFreePanel.style.display = (mode === 'free' && hasActiveQuestion) ? '' : 'none';
+      if (!hasActiveQuestion) elWaitingText.textContent = `Mode ${mode} — en attente du lancement Admin…`;
+    }
+
+    function markSubmitted(message) {
+      elAnswerAck.textContent = message;
+      elAnswerAck.style.display = '';
+      elAnswerAck.classList.add('show');
+    }
+
+    function clearSubmitted() {
+      elAnswerAck.textContent = '';
+      elAnswerAck.style.display = 'none';
+      elAnswerAck.classList.remove('show');
+      elBtnTrue.classList.remove('selected');
+      elBtnFalse.classList.remove('selected');
     }
 
     elGuessRange.addEventListener('input', () => {
@@ -148,7 +187,9 @@
       myGuess = parseInt(elGuessRange.value, 10);
       if (!sendDebounce) {
         sendDebounce = debounce(() => {
-          if (socket && myGuess !== null) socket.emit('guess:answer', { value: myGuess }, () => {});
+          if (socket && myGuess !== null) socket.emit('guess:answer', { value: myGuess }, () => {
+            markSubmitted(`✅ Réponse prise en compte : ${myGuess}`);
+          });
         }, 250);
       }
       sendDebounce();
@@ -158,16 +199,18 @@
       if (!socket) return;
       const text = elFreeText.value.trim();
       elFreeInfo.textContent = 'Réponse envoyée.';
+      markSubmitted('✅ Réponse prise en compte');
       socket.emit('free:answer', { text }, () => {});
     });
 
     elJoinBtn.addEventListener('click', () => {
       const room = elRoom.value.trim().toUpperCase();
       const pseudo = elPseudo.value.trim();
+      const teamColor = (elTeamPicker.querySelector('input[name="teamColor"]:checked') || {}).value || '#ff5f7e';
       if (!room || !pseudo) { alert('Merci de remplir la salle et le pseudo'); return; }
 
       socket = io();
-      socket.emit('player:join', { room, name: pseudo }, (res) => {
+      socket.emit('player:join', { room, name: pseudo, color: teamColor }, (res) => {
         if (!res || !res.ok) {
           const reason = res && res.error === 'locked' ? 'Partie en cours, réessayez bientôt.' : 'Impossible de rejoindre';
           alert(reason);
@@ -176,12 +219,17 @@
 
         elJoinedRoom.textContent = room;
         elJoinedPseudo.textContent = res.name;
+        elJoinedTeamDot.style.background = teamColor;
         elForm.style.display = 'none';
+        elWaitingPanel.style.display = '';
+        elWaitingText.textContent = "Connecté. En attente du lancement de la partie par l'admin…";
       });
 
       // Mode
       socket.on('mode:changed', ({ mode }) => {
+        questionActive = { quiz: false, guess: false, free: false, buzzer: false };
         setModeUI(mode);
+        clearSubmitted();
         if (mode === 'buzzer') {
           setBuzzEnabled(false);
           elRoundState.textContent = 'Mode Buzzer — en attente du tour...';
@@ -235,10 +283,12 @@
       });
 
       // Buzzer
-      socket.on('round:open', () => { stopCountdown(); if (currentMode === 'buzzer') { setBuzzEnabled(true); elRoundState.textContent = 'Tour ouvert !'; } });
-      socket.on('round:winner', (data) => { setBuzzEnabled(false); elRoundState.textContent = `Gagnant: ${data.name}`; });
+      socket.on('round:open', () => { stopCountdown(); questionActive.buzzer = true; setModeUI('buzzer'); clearSubmitted(); if (currentMode === 'buzzer') { setBuzzEnabled(true); elRoundState.textContent = 'Tour ouvert !'; } });
+      socket.on('round:winner', (data) => { questionActive.buzzer = false; setBuzzEnabled(false); elRoundState.textContent = `Gagnant: ${data.name}`; setModeUI('buzzer'); });
       socket.on('round:reset', () => {
         stopCountdown();
+        questionActive = { quiz: false, guess: false, free: false, buzzer: false };
+        setModeUI(currentMode);
         if (currentMode === 'buzzer') { setBuzzEnabled(false); elRoundState.textContent = 'Tour réinitialisé. En attente...'; }
         if (currentMode === 'quiz') { setQuizEnabled(false); elQuizInfo.textContent = 'Question réinitialisée. En attente...'; }
         if (currentMode === 'guess') { elGuessInfo.textContent = 'Question réinitialisée. En attente...'; myGuess = null; clearTimeout(autoFinalTimer); autoFinalTimer = null; }
@@ -246,8 +296,9 @@
       });
 
       // Quiz
-      socket.on('quiz:question', ({ question, seconds }) => { quizAnswered = null; elQuizQ.textContent = question; setQuizEnabled(true); elQuizInfo.textContent = `Réponds maintenant (${seconds}s)`; });
+      socket.on('quiz:question', ({ question, seconds }) => { quizAnswered = null; questionActive.quiz = true; setModeUI('quiz'); clearSubmitted(); elQuizQ.textContent = question; setQuizEnabled(true); elQuizInfo.textContent = `Réponds maintenant (${seconds}s)`; });
       socket.on('quiz:result', ({ correct, countTrue, countFalse, total }) => {
+        questionActive.quiz = false;
         setQuizEnabled(false);
         const txt = correct ? 'Vrai' : 'Faux';
         const me = quizAnswered == null ? '' : (quizAnswered === correct ? ' — Bravo, +1 !' : ' — Mauvaise réponse.');
@@ -256,6 +307,9 @@
 
       // Guess
       socket.on('guess:start', ({ question, min, max, seconds }) => {
+        questionActive.guess = true;
+        setModeUI('guess');
+        clearSubmitted();
         elGuessQ.textContent = question;
         elGuessRange.min = String(min);
         elGuessRange.max = String(max);
@@ -269,6 +323,8 @@
         clearTimeout(autoFinalTimer); autoFinalTimer = null;
       });
       socket.on('guess:result', ({ correct, winners }) => {
+        questionActive.guess = false;
+        setModeUI('guess');
         const me = (myGuess == null) ? '' : (Array.isArray(winners) && winners.includes(elJoinedPseudo.textContent) ? ' — Bravo !' : ' — Dommage.');
         elGuessInfo.textContent = `Réponse: ${correct}${me}`;
         clearTimeout(autoFinalTimer); autoFinalTimer = null;
@@ -276,17 +332,29 @@
 
       // Free
       socket.on('free:question', ({ question, seconds }) => {
+        questionActive.free = true;
+        setModeUI('free');
+        clearSubmitted();
         elFreeQ.textContent = question;
         elFreeText.value = '';
         elFreeInfo.textContent = `Réponds maintenant (${seconds}s)`;
       });
-      // Aucun résultat spécifique côté joueur pour free; tout se passe à la TV
+      socket.on('free:results', () => {
+        questionActive.free = false;
+        setModeUI('free');
+      });
+
+      socket.on('player:kicked', () => {
+        alert("Vous avez été retiré de la salle par l'admin.");
+        window.location.href = '/join';
+      });
+
     });
 
     // Actions
-    elBuzz.addEventListener('click', () => { if (!socket) return; setBuzzEnabled(false); socket.emit('buzz:press', () => {}); });
-    elBtnTrue.addEventListener('click', () => { if (!socket) return; setQuizEnabled(false); quizAnswered = true; elQuizInfo.textContent = 'Réponse envoyée: Vrai'; socket.emit('quiz:answer', { answer: true }, () => {}); });
-    elBtnFalse.addEventListener('click', () => { if (!socket) return; setQuizEnabled(false); quizAnswered = false; elQuizInfo.textContent = 'Réponse envoyée: Faux'; socket.emit('quiz:answer', { answer: false }, () => {}); });
+    elBuzz.addEventListener('click', () => { if (!socket) return; setBuzzEnabled(false); socket.emit('buzz:press', () => { markSubmitted('✅ Buzz pris en compte'); }); });
+    elBtnTrue.addEventListener('click', () => { if (!socket) return; setQuizEnabled(false); quizAnswered = true; elBtnTrue.classList.add('selected'); elQuizInfo.textContent = 'Réponse envoyée: Vrai'; socket.emit('quiz:answer', { answer: true }, () => { markSubmitted('✅ Réponse Vrai prise en compte'); }); });
+    elBtnFalse.addEventListener('click', () => { if (!socket) return; setQuizEnabled(false); quizAnswered = false; elBtnFalse.classList.add('selected'); elQuizInfo.textContent = 'Réponse envoyée: Faux'; socket.emit('quiz:answer', { answer: false }, () => { markSubmitted('✅ Réponse Faux prise en compte'); }); });
   </script>
 </body>
 </html>
