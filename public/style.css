@@ -601,43 +601,97 @@ input[type="range"]::-moz-range-thumb {
 
 
 .game-builder-card {
-  width: min(940px, 94vw);
+  width: min(1100px, 96vw);
   max-height: 90vh;
   overflow: auto;
   border-radius: 18px;
   border: 1px solid rgba(255,255,255,.26);
-  background: rgba(11,18,36,.95);
+  background: rgba(11,18,36,.96);
   box-shadow: 0 20px 60px rgba(0,0,0,.45);
   padding: 1rem;
 }
 
-.game-builder-rows {
+.game-builder-layout {
   display: grid;
-  gap: .6rem;
-  margin-top: .6rem;
+  gap: .85rem;
+  grid-template-columns: 1fr 1.25fr;
 }
 
-.game-builder-row {
-  display: grid;
-  grid-template-columns: minmax(180px, 1.2fr) 1fr 1fr;
-  gap: .6rem;
-  align-items: end;
+.game-builder-column {
   border: 1px solid rgba(255,255,255,.14);
   border-radius: 12px;
-  padding: .65rem;
-  background: rgba(255,255,255,.05);
+  background: rgba(255,255,255,.04);
+  padding: .7rem;
 }
 
-.game-builder-row .field {
-  margin-bottom: 0;
+.game-builder-title {
+  margin: 0 0 .45rem;
+  font-size: 1.05rem;
 }
 
-.game-builder-row .field label {
-  font-size: .86rem;
+.game-builder-list,
+.game-builder-config {
+  display: grid;
+  gap: .5rem;
 }
 
-@media (max-width: 760px) {
-  .game-builder-row {
+.game-builder-list-item,
+.game-builder-config-item {
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 11px;
+  background: rgba(255,255,255,.06);
+  padding: .55rem;
+}
+
+.game-builder-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+}
+
+.game-builder-list-item .hint {
+  font-size: .8rem;
+}
+
+.game-builder-config-item {
+  display: grid;
+  gap: .5rem;
+}
+
+.game-builder-config-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: .5rem;
+}
+
+.game-builder-order {
+  font-size: .8rem;
+  font-weight: 900;
+  color: #ffd400;
+}
+
+.game-builder-config-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .55rem;
+}
+
+.game-builder-config-grid .field {
+  margin: 0;
+}
+
+.game-builder-empty {
+  padding: .8rem;
+  border-radius: 10px;
+  border: 1px dashed rgba(255,255,255,.22);
+  color: var(--muted);
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .game-builder-layout {
     grid-template-columns: 1fr;
   }
 }
