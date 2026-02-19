@@ -119,7 +119,7 @@ export const Core = (() => {
     const joinUrl = buildJoinUrl();
     els.qrLink.href = joinUrl;
     els.qrLink.textContent = '';
-    const qrApi = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=';
+    const qrApi = '/qr?data=';
     const fallbackSvg = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="220" height="220"><rect width="220" height="220" fill="#fff"/><text x="50%" y="45%" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="20" fill="#000">ROOM</text><text x="50%" y="58%" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="30" font-weight="bold" fill="#000">${room}</text></svg>`);
     els.qr.onerror = () => {
       if (els.qr.src !== fallbackSvg) {

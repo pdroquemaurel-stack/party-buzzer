@@ -3,6 +3,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { Server } = require('socket.io');
+const QRCode = require('qrcode');
 
 // Jeux (modules)
 const buzzerGame = require('./server/games/buzzer');
@@ -93,6 +94,36 @@ function serveStatic(req, res) {
     setSecurityHeaders(res);
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
     res.end(JSON.stringify({ ok: true }));
+    return;
+  }
+  if (urlPath === '/qr') {
+    const reqUrl = new URL(req.url, 'http://localhost');
+    const data = String(reqUrl.searchParams.get('data') || '').slice(0, 512);
+    if (!data) {
+      setSecurityHeaders(res);
+      res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('missing data');
+      return;
+    }
+    QRCode.toBuffer(data, {
+      errorCorrectionLevel: 'M',
+      margin: 1,
+      width: 260,
+      type: 'png'
+    }, (err, buffer) => {
+      if (err) {
+        setSecurityHeaders(res);
+        res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
+        res.end('qr_error');
+        return;
+      }
+      setSecurityHeaders(res);
+      res.writeHead(200, {
+        'Content-Type': 'image/png',
+        'Cache-Control': 'no-store, max-age=0'
+      });
+      res.end(buffer);
+    });
     return;
   }
   if (urlPath === '/') urlPath = '/index.html';
@@ -504,6 +535,7 @@ io.on('connection', (socket) => {
       targetSock.disconnect(true);
     }
     r.players.delete(targetSocket);
+    r.scores.delete(target);
     touchRoom(r);
     broadcastPlayers(roomCode);
   });

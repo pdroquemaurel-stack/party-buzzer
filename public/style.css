@@ -434,3 +434,8 @@ input[type="range"]::-moz-range-thumb {
 .quiz-result-item.good { border-left:4px solid var(--green); }
 .quiz-result-item.bad { border-left:4px solid var(--red); }
 .quiz-result-item.none { border-left:4px solid #d9dde4; }
+
+.answer-ack { margin: .7rem 0; padding: .55rem .75rem; border-radius: 10px; background: rgba(0,230,118,.16); border: 1px solid rgba(0,230,118,.45); font-weight: 800; }
+.answer-ack.show { animation: pop-in .2s ease-out; }
+#btnTrue.selected, #btnFalse.selected { outline: 3px solid var(--cyan); filter: brightness(1.08); }
+.quiz-result-item { line-height: 1.4; word-break: break-word; }

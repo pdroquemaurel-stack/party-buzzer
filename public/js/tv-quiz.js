@@ -88,16 +88,16 @@ GameRegistry.register('quiz', {
   onQuestion({ question, seconds }) {
     document.getElementById('quizInfo').textContent = `Question en cours (${seconds}s): "${question}"`;
   },
-  onResult({ correct, countTrue, countFalse, total }) {
+  onResult({ correct, countTrue, countFalse, total, winners = [], losers = [], noAnswer = [] }) {
     const txt = correct ? 'Vrai' : 'Faux';
     const good = correct ? countTrue : countFalse;
     const bad = total - good;
     const noAnswer = Math.max(0, (document.querySelectorAll('#players .score-item').length || total) - total);
     document.getElementById('quizInfo').textContent = `Bonne réponse: ${txt} — Vrai: ${countTrue}, Faux: ${countFalse}, Total: ${total}`;
     Core.showResultsOverlay(`Quiz: bonne réponse = ${txt}`, [
-      { type: 'good', label: `🟢 Bonne réponse: ${good}` },
-      { type: 'bad', label: `🔴 Mauvaise réponse: ${bad}` },
-      { type: 'none', label: `⚪ Pas répondu: ${noAnswer}` }
+      { type: 'good', label: `🟢 Bonne réponse (${winners.length}): ${winners.length ? winners.join(', ') : '—'}` },
+      { type: 'bad', label: `🔴 Mauvaise réponse (${losers.length}): ${losers.length ? losers.join(', ') : '—'}` },
+      { type: 'none', label: `⚪ Pas répondu (${noAnswer.length}): ${noAnswer.length ? noAnswer.join(', ') : '—'}` }
     ]);
   },
   onProgress() {},
