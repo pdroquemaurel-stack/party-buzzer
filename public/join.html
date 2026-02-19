@@ -44,6 +44,11 @@
       <div id="playerScoreValue" class="player-score-value">0</div>
     </section>
 
+    <section id="playerIdentityCard" class="card player-identity-card" style="display:none;">
+      <div id="joinedAvatar" class="player-identity-avatar">J</div>
+      <div class="player-identity-name" id="joinedNameMobile">Joueur</div>
+    </section>
+
     <!-- Buzzer -->
     <section id="buzzerPanel" class="card" style="display:none;">
       <p>Salle: <strong id="joinedRoom"></strong> — Pseudo: <strong id="joinedPseudo"></strong> <span id="joinedTeamDot" class="team-dot"></span></p>
@@ -108,6 +113,9 @@
     const elAnswerAck = document.getElementById('answerAck');
     const elPlayerScoreCard = document.getElementById('playerScoreCard');
     const elPlayerScoreValue = document.getElementById('playerScoreValue');
+    const elPlayerIdentityCard = document.getElementById('playerIdentityCard');
+    const elJoinedAvatar = document.getElementById('joinedAvatar');
+    const elJoinedNameMobile = document.getElementById('joinedNameMobile');
 
     // Buzzer
     const elBuzzerPanel = document.getElementById('buzzerPanel');
@@ -155,6 +163,14 @@
     function debounce(fn, wait) {
       let t = null;
       return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
+    }
+
+
+    function initials(name) {
+      const parts = String(name || '').trim().split(/\s+/);
+      const a = (parts[0] || '').charAt(0) || '';
+      const b = (parts[1] || '').charAt(0) || '';
+      return (a + b).toUpperCase() || (String(name || 'J')[0] || 'J').toUpperCase();
     }
 
     function setBuzzEnabled(on) { elBuzz.disabled = !on; elBuzz.style.opacity = on ? '1' : '0.6'; }
@@ -229,12 +245,26 @@
         elForm.style.display = 'none';
         elWaitingPanel.style.display = '';
         elPlayerScoreCard.style.display = '';
+        elPlayerIdentityCard.style.display = '';
+        elJoinedNameMobile.textContent = res.name;
+        elJoinedAvatar.textContent = initials(res.name);
+        elJoinedAvatar.style.background = teamColor;
         elWaitingText.textContent = "Connecté. En attente du lancement de la partie par l'admin…";
       });
 
       socket.on('room:players', (players) => {
         const me = (players || []).find((p) => p.name === elJoinedPseudo.textContent);
         if (me) elPlayerScoreValue.textContent = String(me.score ?? 0);
+      });
+
+
+      socket.on('room:state', ({ locked }) => {
+        if (locked) {
+          questionActive = { quiz: false, guess: false, free: false, buzzer: false };
+          setModeUI(currentMode);
+          elWaitingPanel.style.display = '';
+          elWaitingText.textContent = "La salle est fermée par l'admin.";
+        }
       });
 
       // Mode
