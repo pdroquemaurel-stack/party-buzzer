@@ -109,9 +109,6 @@ GameRegistry.register('quiz', {
   },
   onResult({ correct, countTrue, countFalse, total, winners = [], losers = [], noAnswer = [] }) {
     const txt = correct ? 'Vrai' : 'Faux';
-    const good = correct ? countTrue : countFalse;
-    const bad = total - good;
-    const noAnswer = Math.max(0, (document.querySelectorAll('#players .score-item').length || total) - total);
     document.getElementById('quizInfo').textContent = `Bonne réponse: ${txt} — Vrai: ${countTrue}, Faux: ${countFalse}, Total: ${total}`;
     Core.showResultsOverlay(`Quiz: bonne réponse = ${txt}`, [
       { type: 'good', label: `🟢 Bonne réponse (${winners.length}): ${winners.length ? winners.join(', ') : '—'}` },
