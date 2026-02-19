@@ -69,6 +69,7 @@ export const Core = (() => {
   // State
   let cdTimer = null;
   let quizTimer = null;
+  let freeSeriesActive = false;
 
   // Utils
   function generateRoomCode(len) {
@@ -286,11 +287,16 @@ export const Core = (() => {
     let remain = total;
     els.quizTimer.textContent = `⏱ Temps restant: ${remain}s`;
     updateTimerRing(remain, total);
+    if (remain <= 5) playBeep(980, 90);
     els.freeHint.style.display = showFreeHint ? 'block' : 'none';
     els.quizQOverlay.classList.add('show');
     quizTimer = setInterval(() => {
       remain--;
-      if (remain > 0) { els.quizTimer.textContent = `⏱ Temps restant: ${remain}s`; updateTimerRing(remain, total); }
+      if (remain > 0) {
+        els.quizTimer.textContent = `⏱ Temps restant: ${remain}s`;
+        updateTimerRing(remain, total);
+        if (remain <= 5) playBeep(980, 90);
+      }
       else { clearInterval(quizTimer); quizTimer = null; hideTimerRing(); }
     }, 1000);
   }
@@ -350,6 +356,7 @@ export const Core = (() => {
 
   // Socket handlers communs
   socket.on(EVENTS.MODE_CHANGED, ({ mode }) => {
+    freeSeriesActive = false;
     hideQuestionOverlay();
     hideResultsOverlay();
     stopCountdownUI();
@@ -406,10 +413,12 @@ export const Core = (() => {
   socket.on(EVENTS.FREE_QUESTION, ({ question, seconds, index, total }) => {
     setModeUI('free');
     showQuestionOverlay(question, seconds, true);
-    if (typeof index === 'number' && typeof total === 'number') showProgress(`Série: ${index + 1}/${total}`);
+    freeSeriesActive = typeof index === 'number' && typeof total === 'number';
+    if (freeSeriesActive) showProgress(`Série: ${index + 1}/${total}`);
     emitGameEvent(GAME_EVENTS.QUESTION, { question, seconds, index, total });
   });
   socket.on(EVENTS.FREE_RESULTS, ({ question, expected, items }) => {
+    freeSeriesActive = false;
     hideQuestionOverlay();
     emitGameEvent(GAME_EVENTS.RESULT, { question, expected, items });
     hideProgress();
@@ -417,9 +426,10 @@ export const Core = (() => {
   socket.on(EVENTS.FREE_VALIDATED, ({ name, validated }) => {
     emitGameEvent(GAME_EVENTS.PROGRESS, { name, validated, context: 'single' });
   });
-  socket.on(EVENTS.FREE_REVIEW_OPEN, ({ index, total, question, items }) => {
+  socket.on(EVENTS.FREE_REVIEW_OPEN, ({ index, total, question, expected, seconds, items }) => {
+    freeSeriesActive = false;
     showProgress(`Correction: ${index + 1}/${total}`);
-    emitGameEvent(GAME_EVENTS.QUESTION, { index, total, question, items, phase: 'review' });
+    emitGameEvent(GAME_EVENTS.QUESTION, { index, total, question, expected, seconds, items, phase: 'review' });
   });
   socket.on(EVENTS.FREE_REVIEW_VALIDATED, ({ name, validated }) => {
     emitGameEvent(GAME_EVENTS.PROGRESS, { name, validated, context: 'review' });
@@ -481,6 +491,14 @@ export const Core = (() => {
     if (els.overlayStopBtn && !els.overlayStopBtn._wired) {
       els.overlayStopBtn._wired = true;
       els.overlayStopBtn.addEventListener('click', () => {
+        if (currentMode === 'free' && freeSeriesActive && els.quizQOverlay?.classList.contains('show')) {
+          autoPlayRunning = false;
+          freeSeriesActive = false;
+          hideQuestionOverlay();
+          socket.emit('free:series:finish');
+          showProgress('Série interrompue — passage à la correction');
+          return;
+        }
         autoPlayRunning = false;
         showProgress('Auto‑play arrêté');
         setTimeout(hideProgress, 1200);

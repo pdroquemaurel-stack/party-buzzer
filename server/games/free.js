@@ -176,8 +176,16 @@ module.exports = {
   adminSeriesFinish(io, room, code) {
     const g = room.game || {};
     if (g.mode !== 'series' || g.phase !== 'series_active') return;
+
+    const askedCount = g.currentIndex + 1;
+    if (askedCount <= 0) return;
+
+    g.series = g.series.slice(0, askedCount);
+    g.seriesLength = askedCount;
+    g.currentIndex = askedCount - 1;
     g.phase = 'review';
     g.reviewIndex = 0;
+
     const first = g.series[0];
     const items = this._buildReviewItems(room, g, 0);
     io.to(code).emit('free:review_open', {
