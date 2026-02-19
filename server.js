@@ -3,6 +3,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { Server } = require('socket.io');
+const QRCode = require('qrcode');
 
 // Jeux (modules)
 const buzzerGame = require('./server/games/buzzer');
@@ -21,6 +22,7 @@ const PORT = process.env.PORT || 3000;
 const publicDir = path.join(__dirname, 'public');
 const ROOM_CODE_RE = /^[A-Z0-9]{4,8}$/;
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
+const SESSION_COOKIE = 'party_tv_room';
 const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
 const ROOM_TTL_MS = 30 * 60 * 1000;
 const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
@@ -39,6 +41,19 @@ function parseRoomCode(raw) {
   const code = String(raw || '').toUpperCase().trim();
   if (!ROOM_CODE_RE.test(code)) return '';
   return code;
+}
+
+function parseCookies(req) {
+  const raw = String((req && req.headers && req.headers.cookie) || '');
+  if (!raw) return {};
+  return raw.split(';').reduce((acc, part) => {
+    const idx = part.indexOf('=');
+    if (idx <= 0) return acc;
+    const key = part.slice(0, idx).trim();
+    const val = decodeURIComponent(part.slice(idx + 1).trim());
+    if (key) acc[key] = val;
+    return acc;
+  }, {});
 }
 
 function createRateLimiter(limit, windowMs) {
@@ -81,8 +96,51 @@ function serveStatic(req, res) {
     res.end(JSON.stringify({ ok: true }));
     return;
   }
+  if (urlPath === '/qr') {
+    const reqUrl = new URL(req.url, 'http://localhost');
+    const data = String(reqUrl.searchParams.get('data') || '').slice(0, 512);
+    if (!data) {
+      setSecurityHeaders(res);
+      res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('missing data');
+      return;
+    }
+    QRCode.toBuffer(data, {
+      errorCorrectionLevel: 'M',
+      margin: 1,
+      width: 260,
+      type: 'png'
+    }, (err, buffer) => {
+      if (err) {
+        setSecurityHeaders(res);
+        res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
+        res.end('qr_error');
+        return;
+      }
+      setSecurityHeaders(res);
+      res.writeHead(200, {
+        'Content-Type': 'image/png',
+        'Cache-Control': 'no-store, max-age=0'
+      });
+      res.end(buffer);
+    });
+    return;
+  }
   if (urlPath === '/') urlPath = '/index.html';
-  if (urlPath === '/tv') urlPath = '/tv.html';
+  if (urlPath === '/tv') {
+    const cookies = parseCookies(req);
+    const savedRoom = parseRoomCode(cookies[SESSION_COOKIE]);
+    if (savedRoom) {
+      setSecurityHeaders(res);
+      res.writeHead(302, {
+        Location: '/tv.html?room=' + encodeURIComponent(savedRoom),
+        'Set-Cookie': SESSION_COOKIE + '=; Max-Age=0; Path=/; SameSite=Lax'
+      });
+      res.end();
+      return;
+    }
+    urlPath = '/tv.html';
+  }
   if (urlPath === '/join') urlPath = '/join.html';
 
   const resolvedPath = path.resolve(publicDir, '.' + urlPath);
@@ -248,6 +306,20 @@ io.on('connection', (socket) => {
     broadcastPlayers(code);
   });
 
+  socket.on('tv:remember', ({ room }, ack) => {
+    if (role !== 'tv') { ack && ack({ ok: false }); return; }
+    const code = parseRoomCode(room);
+    if (!code) { ack && ack({ ok: false, error: 'invalid_room' }); return; }
+    roomCode = code;
+    const r = getRoom(code);
+    socket.join(code);
+    socket.emit('room:ready', { code });
+    socket.emit('mode:changed', { mode: r.gameId });
+    broadcastPlayers(code);
+    broadcastRoomState(code);
+    ack && ack({ ok: true, code });
+  });
+
   // Verrouillage manuel (optionnel)
   socket.on('room:lock', (locked) => {
     if (role !== 'tv' || !roomCode) return;
@@ -408,6 +480,16 @@ io.on('connection', (socket) => {
     broadcastRoomState(roomCode);
   });
 
+  socket.on('free:toggle_validate', ({ name }) => {
+    if (role !== 'tv' || !roomCode) return;
+    const r = getRoom(roomCode);
+    if (r.gameId !== 'free') return;
+    const player = String(name || '').trim();
+    if (!player) return;
+    games.free.adminToggleValidate(io, r, roomCode, player, broadcastPlayers);
+    touchRoom(r);
+  });
+
   // FREE - Series
 	socket.on('free:series:start', ({ items }) => {
     if (role !== 'tv' || !roomCode) return;
@@ -444,6 +526,28 @@ io.on('connection', (socket) => {
     if (r.gameId !== 'free') return;
     games.free.adminSeriesGotoIndex(io, r, roomCode, index);
     touchRoom(r);
+  });
+
+  socket.on('player:kick', ({ name }) => {
+    if (role !== 'tv' || !roomCode) return;
+    const r = getRoom(roomCode);
+    const target = String(name || '').trim();
+    if (!target) return;
+    let targetSocket = null;
+    r.players.forEach((p, sid) => {
+      if (!targetSocket && p.name === target) targetSocket = sid;
+    });
+    if (!targetSocket) return;
+    const targetSock = io.sockets.sockets.get(targetSocket);
+    if (targetSock) {
+      targetSock.emit('player:kicked');
+      targetSock.leave(roomCode);
+      targetSock.disconnect(true);
+    }
+    r.players.delete(targetSocket);
+    r.scores.delete(target);
+    touchRoom(r);
+    broadcastPlayers(roomCode);
   });
 
   socket.on('disconnect', () => {

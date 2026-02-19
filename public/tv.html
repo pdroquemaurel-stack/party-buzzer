@@ -2,14 +2,14 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
-  <title>Party Buzzer - TV/Admin</title>
+  <title>Party Buzzer 3.0 - TV/Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body class="tv-body">
   <main class="container tv-layout-3 tight">
     <header class="tv-header card">
-      <div class="tv-header-left"><h1 style="margin:0;">Party Buzzer</h1></div>
+      <div class="tv-header-left"><h1 style="margin:0;">Party Buzzer 3.0</h1></div>
       <div class="tv-header-right">
         <div class="mode-switch" id="modeSwitch">
           <label class="mode-pill"><input type="radio" name="mode" value="buzzer" checked /> Buzzer</label>
@@ -42,6 +42,10 @@
 
       <section class="tv-status-box">
         <div id="status" class="tv-status"></div>
+        <div id="timerRing" class="timer-ring" style="display:none;">
+          <div class="timer-value">0</div>
+          <div class="timer-label">Timer</div>
+        </div>
       </section>
     </aside>
 
@@ -78,8 +82,11 @@
         </div>
         <div class="row btn-row" style="flex-wrap:wrap;">
           <div class="field" style="min-width:160px; max-width:220px;">
-            <label>Durée (secondes)</label>
-            <input id="quizSeconds" type="number" min="1" max="30" value="5" />
+            <label>Durée de réponse (secondes)</label>
+            <input id="quizSeconds" type="number" min="1" max="30" value="8" />
+            <div class="duration-presets" data-target="quizSeconds">
+              <button type="button" data-seconds="5">5s</button><button type="button" data-seconds="8">8s</button><button type="button" data-seconds="12">12s</button>
+            </div>
           </div>
           <div class="field" style="min-width:160px; max-width:220px;">
             <label>Questions dans la série</label>
@@ -123,9 +130,12 @@
             <label>Max</label>
             <input id="guessMax" type="number" value="100" />
           </div>
-          <div class="field" style="min-width:140px;">
-            <label>Durée (s)</label>
-            <input id="guessSeconds" type="number" min="1" max="60" value="8" />
+          <div class="field" style="min-width:160px; max-width:220px;">
+            <label>Durée de réponse (secondes)</label>
+            <input id="guessSeconds" type="number" min="1" max="60" value="10" />
+            <div class="duration-presets" data-target="guessSeconds">
+              <button type="button" data-seconds="8">8s</button><button type="button" data-seconds="12">12s</button><button type="button" data-seconds="20">20s</button>
+            </div>
           </div>
           <div class="field" style="min-width:160px; max-width:220px;">
             <label>Questions dans la série</label>
@@ -163,9 +173,12 @@
           <input id="freeQuestion" type="text" placeholder="Ex: Écris une définition drôle de 'internet'." />
         </div>
         <div class="row btn-row" style="flex-wrap:wrap;">
-          <div class="field" style="min-width:160px; max-width:220px;">
-            <label>Durée (secondes)</label>
+          <div class="field" style="min-width:170px; max-width:240px;">
+            <label>Durée de réponse (secondes)</label>
             <input id="freeSeconds" type="number" min="5" max="180" value="30" />
+            <div class="duration-presets" data-target="freeSeconds">
+              <button type="button" data-seconds="20">20s</button><button type="button" data-seconds="30">30s</button><button type="button" data-seconds="45">45s</button>
+            </div>
           </div>
           <div class="field" style="min-width:160px; max-width:220px;">
             <label>Questions dans la série</label>
@@ -199,6 +212,16 @@
       <div class="label">Gagnant</div>
       <div id="winnerName" class="winner"></div>
       <div class="hint">(cliquer pour fermer)</div>
+    </div>
+  </div>
+
+
+  <div id="resultsOverlay" class="overlay">
+    <div style="max-width:760px; width:92vw; text-align:left;">
+      <div class="label" style="text-align:center;">Résultats</div>
+      <div id="resultsTitle" class="question" style="font-size:1.4rem; text-align:center; margin-bottom:.8rem;"></div>
+      <div id="resultsBody" class="quiz-result-grid"></div>
+      <div style="text-align:center; margin-top:1rem;"><button id="resultsCloseBtn">Fermer</button></div>
     </div>
   </div>
 
